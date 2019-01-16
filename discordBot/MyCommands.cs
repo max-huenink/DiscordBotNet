@@ -32,94 +32,99 @@ namespace discordBot
         [Command("tp")]
         public async Task TP([Remainder]string content)
         {
-            if (content == null)
+            if (content == null) // Exit if there wasn't an argument
                 return;
 
+            // Mentioned channel ids
             var channelID = Context.Message.MentionedChannelIds;
+            // Mentioned role ids
             var roleID = Context.Message.MentionedRoleIds;
+            // Mentioned member ids
             var memberID = Context.Message.MentionedUserIds;
 
+            // Splits the content by spaces
             string[] splitContent = content.Split(new char[] { ' ' });
+            // Gets the last argument
             string lastArg = splitContent.LastOrDefault();
-            char lastArgType = lastArg.FirstOrDefault(a => a == '#' || a == '@');
+            // Gets the first # or @ in the argument
+            //char lastArgType = lastArg.FirstOrDefault(a => a == '#' || a == '@');
 
-            IGuildUser destUser = null;
-            IVoiceChannel destChannel = null;
-            
-            ulong lastArgID = 0;
-            if (!ulong.TryParse(lastArg.Remove(lastArg.Length - 1).Remove(0, 2), out lastArgID))
-            {
-                if (!ulong.TryParse(lastArg, out lastArgID))
-                {
-                    await ReplyAsync("Couldn't find the id.");
-                    return;
-                }
-            }
-
-            if (string.IsNullOrEmpty(lastArgType.ToString())) // assume just id
-            {
-                await ReplyAsync("Can't work with just an id");
+            if (string.IsNullOrEmpty(lastArg))
                 return;
-            }
-            else if (lastArgType == '@') // member
-            {
-                destUser = await Context.Guild.GetUserAsync(lastArgID);
-            }
-            else if (lastArgType == '#') // channel
-            {
-                destChannel = await Context.Guild.GetVoiceChannelAsync(lastArgID);
-            }
 
-            if (destChannel == null)
+            // The destination user
+            IGuildUser destUser = null;
+            // The destination channel
+            IVoiceChannel destChannel = null;
+
+            // Attempts to parse the last argument, removing (<@, <#, or <@&) and >, to an id
+            if (!ulong.TryParse(lastArg.Remove(lastArg.Length - 1).Remove(0, 2), out ulong lastArgID))
+                if (!ulong.TryParse(lastArg.Remove(lastArg.Length - 1).Remove(0, 3), out lastArgID))
+                    if (!ulong.TryParse(lastArg, out lastArgID))
+                    {
+                        await ReplyAsync("Couldn't find the id.");
+                        return;
+                    }
+
+            // Attempt to find destination user based on lastArgID
+            destUser = await Context.Guild.GetUserAsync(lastArgID);
+            // Attempt to find destination channel based on lastArgID
+            destChannel = await Context.Guild.GetVoiceChannelAsync(lastArgID);
+
+            if (destChannel == null) // If the destination channel is null
             {
-                if (destUser == null)
+                if (destUser == null) // If the destination user is ALSO null, exit
                 {
                     await ReplyAsync("No voice channel or user found");
                     return;
                 }
-                if (destUser.VoiceChannel == null)
+                if (destUser.VoiceChannel == null) // If the destination user is not in a voice channel
                 {
-                    await ReplyAsync("User is not in voice");
+                    await ReplyAsync($"Specified user. {destUser.Username}. is not in a voice channel");
                     return;
                 }
-
+                // Destination user must be not null and in a voice channel, set their channel to the destination channel
                 destChannel = destUser.VoiceChannel;
             }
 
-            foreach (ulong id in memberID)
+            // Potential teleport candidates
+            var candidates = await Context.Guild.GetUsersAsync();
+            // A list of IGuildUser to teleport
+            List<IGuildUser> teleport = new List<IGuildUser>();
+            // The afk voice channel of the server
+            IVoiceChannel afkChannel = await Context.Guild.GetAFKChannelAsync();
+
+            foreach (ulong id in memberID) // Add every mentioned user to the teleport list
             {
-                IGuildUser user = await Context.Guild.GetUserAsync(id);
+                teleport.Add(await Context.Guild.GetUserAsync(id));
+            }
+
+            if (splitContent.Length == 1) // If there was only one argument, add the author to the teleport list
+                teleport.Add(Context.Message.Author as IGuildUser);
+
+            if (IsBotMod(Context.Message.Author)) // If the author is a bot mod
+            {
+                if (splitContent.Length == 1 && destUser==null) // If there wasn't a user specified and there was only one argument, teleport everyone in voice
+                    foreach (IGuildUser user in candidates.Where(a => !string.IsNullOrEmpty(a.VoiceSessionId) && a.VoiceChannel != afkChannel))
+                        teleport.Add(user);
+
+                if (roleID.Count >= 0) // If a role was specified, teleport every user with specified role who is in voice
+                    foreach (ulong id in roleID)
+                        foreach (IGuildUser user in candidates.Where(a => !string.IsNullOrEmpty(a.VoiceSessionId) && a.RoleIds.Any(b => b == id)))
+                            teleport.Add(user);
+            }
+            // Removes duplicates
+            teleport = teleport.Distinct().ToList();
+
+            // Removes the destination user and any user in the afk channel from the teleport list
+            teleport.RemoveAll(a => a == destUser || a.VoiceChannel == afkChannel || a.VoiceChannel == destChannel);
+            
+            foreach (var user in teleport) // Teleport every user in the list
+            {
+                Console.WriteLine($"Teleporting {user.Username} to {destChannel.Name}");
                 await user.ModifyAsync(a => a.Channel = new Optional<IVoiceChannel>(destChannel));
             }
-            if (IsBotMod(Context.Message.Author))
-            {
-                var users = await Context.Guild.GetUsersAsync();
-                if (splitContent.Length == 1)
-                {
-                    foreach (IGuildUser user in users)
-                    {
-                        if (string.IsNullOrEmpty(user.VoiceSessionId))
-                            continue;
-                        await user.ModifyAsync(b => b.Channel = new Optional<IVoiceChannel>(destChannel));
-                    }
-                    return;
-                }
-                if (roleID.Count >= 0)
-                {
-                    foreach (ulong id in roleID)
-                    {
-                        foreach (IGuildUser user in users)
-                        {
-                            if (string.IsNullOrEmpty(user.VoiceSessionId))
-                                continue;
-                            if (user.RoleIds.Any(a => a == id))
-                                await user.ModifyAsync(b => b.Channel = new Optional<IVoiceChannel>(destChannel));
-                        }
-                    }
-                }
-                return;
-            }
-            await ReplyAsync("You are not a bot mod.");
+            await ReplyAsync($"Teleported {teleport.Count} users to {destChannel.Name}");
         }
     }
 
