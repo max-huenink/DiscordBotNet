@@ -22,7 +22,7 @@ namespace discordBot
             client = new DiscordSocketClient(new DiscordSocketConfig
             {
                 LogLevel = LogSeverity.Verbose,
-                MessageCacheSize = 20,
+                //MessageCacheSize = 20,
             });
             commands = new CommandService();
             services = new ServiceCollection().BuildServiceProvider();
@@ -46,7 +46,7 @@ namespace discordBot
             // Hook the MessageReceived Event into our Command Handler
             client.MessageReceived += HandleCommand;
 
-            client.MessageDeleted += HandleDelete;
+            //client.MessageDeleted += HandleDelete;
             // Discover all of the commands in this assembly and load them.
             await commands.AddModulesAsync(Assembly.GetEntryAssembly(), services);
         }
@@ -72,7 +72,7 @@ namespace discordBot
         public async Task HandleDelete(Cacheable<IMessage, ulong> message, ISocketMessageChannel channel)
         {
             IMessage x = await message.GetOrDownloadAsync();
-            await x.Channel.SendMessageAsync($"The delete message was from {x.Author} and was: {x.Content} with {x.Embeds.Count} embeds");
+            await x.Channel.SendMessageAsync($"The deleted message was from {x.Author} and was: {x.Content}");
         }
 
         private Task Logger(LogMessage msg)
