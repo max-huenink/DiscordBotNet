@@ -46,26 +46,20 @@ namespace discordBot
             string[] splitContent = content.Split(new char[] { ' ' });
             // Gets the last argument
             string lastArg = splitContent.LastOrDefault();
-            // Gets the first # or @ in the argument
-            //char lastArgType = lastArg.FirstOrDefault(a => a == '#' || a == '@');
 
             if (string.IsNullOrEmpty(lastArg))
                 return;
 
+            // The message author as a guild user
+            IGuildUser author = Context.Message.Author as IGuildUser;
             // The destination user
             IGuildUser destUser = null;
             // The destination channel
             IVoiceChannel destChannel = null;
 
-            // Attempts to parse the last argument, removing (<@, <#, or <@&) and >, to an id
-            if (!ulong.TryParse(lastArg.Remove(lastArg.Length - 1).Remove(0, 2), out ulong lastArgID))
-                if (!ulong.TryParse(lastArg.Remove(lastArg.Length - 1).Remove(0, 3), out lastArgID))
-                    if (!ulong.TryParse(lastArg, out lastArgID))
-                    {
-                        await ReplyAsync("Couldn't find the id.");
-                        return;
-                    }
-
+            // Attempts to parse the last argument, removing non-digit chars, to an id
+            ulong.TryParse(new string(lastArg.Where(c => char.IsLetterOrDigit(c)).ToArray()), out ulong lastArgID);
+            
             // Attempt to find destination user based on lastArgID
             destUser = await Context.Guild.GetUserAsync(lastArgID);
             // Attempt to find destination channel based on lastArgID
@@ -75,12 +69,12 @@ namespace discordBot
             {
                 if (destUser == null) // If the destination user is ALSO null, exit
                 {
-                    await ReplyAsync("No voice channel or user found");
+                    await ReplyAsync("No voice channel or user found.");
                     return;
                 }
                 if (destUser.VoiceChannel == null) // If the destination user is not in a voice channel
                 {
-                    await ReplyAsync($"Specified user. {destUser.Username}. is not in a voice channel");
+                    await ReplyAsync($"Specified user, {destUser.Username}, is not in a voice channel.");
                     return;
                 }
                 // Destination user must be not null and in a voice channel, set their channel to the destination channel
@@ -95,36 +89,39 @@ namespace discordBot
             IVoiceChannel afkChannel = await Context.Guild.GetAFKChannelAsync();
 
             foreach (ulong id in memberID) // Add every mentioned user to the teleport list
-            {
                 teleport.Add(await Context.Guild.GetUserAsync(id));
-            }
 
             if (splitContent.Length == 1) // If there was only one argument, add the author to the teleport list
-                teleport.Add(Context.Message.Author as IGuildUser);
+                teleport.Add(author);
 
-            if (IsBotMod(Context.Message.Author)) // If the author is a bot mod
+            if (IsBotMod(author)) // If the author is a bot mod
             {
                 if (splitContent.Length == 1 && destUser==null) // If there wasn't a user specified and there was only one argument, teleport everyone in voice
-                    foreach (IGuildUser user in candidates.Where(a => !string.IsNullOrEmpty(a.VoiceSessionId) && a.VoiceChannel != afkChannel))
+                    foreach (IGuildUser user in candidates.Where(a => !string.IsNullOrEmpty(a.VoiceSessionId)))
                         teleport.Add(user);
 
-                if (roleID.Count >= 0) // If a role was specified, teleport every user with specified role who is in voice
+                if (roleID.Count > 0)// If a role was specified, teleport every user with specified role who is in voice
                     foreach (ulong id in roleID)
                         foreach (IGuildUser user in candidates.Where(a => !string.IsNullOrEmpty(a.VoiceSessionId) && a.RoleIds.Any(b => b == id)))
                             teleport.Add(user);
             }
+
             // Removes duplicates
             teleport = teleport.Distinct().ToList();
 
             // Removes the destination user and any user in the afk channel from the teleport list
             teleport.RemoveAll(a => a == destUser || a.VoiceChannel == afkChannel || a.VoiceChannel == destChannel);
-            
-            foreach (var user in teleport) // Teleport every user in the list
+
+            if (!author.GetPermissions(destChannel).MoveMembers) // If the author doesn't have move permissions for the destination channel, exit
             {
-                Console.WriteLine($"Teleporting {user.Username} to {destChannel.Name}");
-                await user.ModifyAsync(a => a.Channel = new Optional<IVoiceChannel>(destChannel));
+                await ReplyAsync($"You do not have move permission for channel \"{destChannel.Name}\"");
+                return;
             }
-            await ReplyAsync($"Teleported {teleport.Count} users to {destChannel.Name}");
+
+            foreach (var user in teleport) // Teleport every user in the list
+                await user.ModifyAsync(a => a.Channel = new Optional<IVoiceChannel>(destChannel));
+
+            await ReplyAsync($"Teleported {teleport.Count} user(s) to \"{destChannel.Name}\"");
         }
     }
 
