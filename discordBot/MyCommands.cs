@@ -150,7 +150,13 @@ namespace discordBot
         public async Task Exit()
         {
             await Context.Client.StopAsync();
-            await Exit();
+            Environment.Exit(0);
+        }
+
+        [Command("repeat")]
+        public async Task Repeat([Remainder]string input)
+        {
+            await ReplyAsync($"{Context.Message.Author.Mention} said: {input}");
         }
     }
 }
