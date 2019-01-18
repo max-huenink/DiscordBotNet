@@ -28,7 +28,7 @@ namespace discordBot
             client = new DiscordSocketClient(new DiscordSocketConfig
             {
                 LogLevel = LogSeverity.Verbose,
-                //MessageCacheSize = 20,
+                MessageCacheSize = 20,
             });
             commands = new CommandService();
             services = new ServiceCollection().BuildServiceProvider();
