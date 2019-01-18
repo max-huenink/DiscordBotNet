@@ -129,6 +129,15 @@ namespace discordBot
         {
             await ReplyAsync($"I have been running for {Program.sw.Elapsed.Days} days {Program.sw.Elapsed.Hours} hours {Program.sw.Elapsed.Minutes} minutes and {Program.sw.Elapsed.Seconds} seconds.");
         }
+
+        [Command("help")]
+        public async Task Help()
+        {
+            await ReplyAsync($"Here is a list of available commands:\n" +
+                $"\tm!tp\n\t\tMoves the user to the specified user or voice channel, specify a voice channel by its ID" +
+                $"\tm!uptime\n\t\tReports how long the bot has been running" +
+                $"\tm!help\n\t\tShows this help dialog.");
+        }
     }
 
     [Group("debug")]

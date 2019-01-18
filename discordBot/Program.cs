@@ -163,7 +163,7 @@ namespace discordBot
             client.Connected += async () =>
             {
                 sw.Start();
-                await client.SetGameAsync($"you", type: ActivityType.Playing);
+                await client.SetGameAsync($"m!help", type: ActivityType.Playing);
             };
             
             //client.MessageDeleted += HandleDelete;
@@ -176,7 +176,7 @@ namespace discordBot
             if (messageParam.Author.Id == client.CurrentUser.Id)
             {
                 Console.WriteLine("I sent a message!");
-                await client.SetGameAsync($"you for {sw.Elapsed.Days}:{sw.Elapsed.Hours}:{sw.Elapsed.Minutes}.{sw.Elapsed.Seconds}", type: ActivityType.Playing);
+                await client.SetGameAsync($"m!help for {sw.Elapsed.Days}:{sw.Elapsed.Hours}:{sw.Elapsed.Minutes}.{sw.Elapsed.Seconds}", type: ActivityType.Playing);
             }
         }
 
