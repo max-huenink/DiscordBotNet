@@ -35,7 +35,6 @@ namespace discordBot
             commands = new CommandService();
             services = new ServiceCollection().BuildServiceProvider();
 
-            Console.WriteLine($"App directory is: {AppDomain.CurrentDomain.BaseDirectory}");
             tokenPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "token.txt");
             // Checks if the token file exists and either creates the file and asks for token, or reads token from file
             if (!File.Exists(tokenPath))
