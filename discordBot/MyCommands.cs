@@ -123,6 +123,12 @@ namespace discordBot
 
             await ReplyAsync($"Teleported {teleport.Count} user(s) to \"{destChannel.Name}\"");
         }
+
+        [Command("uptime")]
+        public async Task Uptime()
+        {
+            await ReplyAsync($"I have been running for {Program.sw.Elapsed.Days}:{Program.sw.Elapsed.Hours}:{Program.sw.Elapsed.Seconds} seconds");
+        }
     }
 
     [Group("debug")]

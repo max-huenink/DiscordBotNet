@@ -8,6 +8,7 @@ using Discord.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 using System.IO;
+using System.Diagnostics;
 
 namespace discordBot
 {
@@ -19,6 +20,7 @@ namespace discordBot
         private Random rand;
         private readonly string tokenPath;
         private readonly string token;
+        public static readonly Stopwatch sw = new Stopwatch();
 
         static void Main(string[] args) => new Program().Start(args).GetAwaiter().GetResult();
 
@@ -32,21 +34,22 @@ namespace discordBot
             });
             commands = new CommandService();
             services = new ServiceCollection().BuildServiceProvider();
+
             tokenPath = "token.txt";
+            // Checks if the token file exists and either creates the file and asks for token, or reads token from file
             if (!File.Exists(tokenPath))
             {
                 Console.WriteLine("What is the bot token?");
                 Console.Write("Token: ");
                 token = Console.ReadLine();
                 Console.Clear();
+                // Writes the token to the file
                 File.WriteAllText(tokenPath, token);
-                //File.Encrypt(tokenPath);
             }
             else
             {
-                //File.Decrypt(tokenPath);
+                // Reads the first line from the token file
                 token = File.ReadLines(tokenPath).FirstOrDefault();
-                //File.Encrypt(tokenPath);
             }
         }
 
@@ -71,19 +74,20 @@ namespace discordBot
                 client.Ready += RoleLottery;
             }
             
+            // Tries to login, if it fails the token is probably incorrect (or discord is down)
             try
             {
                 await client.LoginAsync(TokenType.Bot, token);
             }
-            catch (Exception)
+            catch (Exception) // Restarts the program if the token is incorrect
             {
                 Console.Clear();
-                Console.WriteLine("That token doesn't work, please try again.");
+                Console.WriteLine("That token doesn't work, or Discord may be down, please try again.");
                 File.Delete(tokenPath);
                 Console.ReadLine();
                 new Program().Start(args).GetAwaiter().GetResult();
             }
-            //await client.LoginAsync(TokenType.Bot, token);
+
             await client.StartAsync();
 
             await Task.Delay(-1);
@@ -154,10 +158,26 @@ namespace discordBot
         {
             // Hook the MessageReceived Event into our Command Handler
             client.MessageReceived += HandleCommand;
+            client.MessageReceived += UpdateUptime;
 
+            client.Connected += async () =>
+            {
+                sw.Start();
+                await client.SetGameAsync($"you", type: ActivityType.Playing);
+            };
+            
             //client.MessageDeleted += HandleDelete;
             // Discover all of the commands in this assembly and load them.
             await commands.AddModulesAsync(Assembly.GetEntryAssembly(), services);
+        }
+
+        public async Task UpdateUptime(SocketMessage messageParam)
+        {
+            if (messageParam.Author.Id == client.CurrentUser.Id)
+            {
+                Console.WriteLine("I sent a message!");
+                await client.SetGameAsync($"you for {sw.Elapsed.Days}:{sw.Elapsed.Hours}:{sw.Elapsed.Seconds}", type: ActivityType.Playing);
+            }
         }
 
         public async Task HandleCommand(SocketMessage messageParam)
