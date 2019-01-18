@@ -174,10 +174,7 @@ namespace discordBot
         public async Task UpdateUptime(SocketMessage messageParam)
         {
             if (messageParam.Author.Id == client.CurrentUser.Id)
-            {
-                Console.WriteLine("I sent a message!");
                 await client.SetGameAsync($"m!help for {sw.Elapsed.Days}:{sw.Elapsed.Hours}:{sw.Elapsed.Minutes}.{sw.Elapsed.Seconds}", type: ActivityType.Playing);
-            }
         }
 
         public async Task HandleCommand(SocketMessage messageParam)
