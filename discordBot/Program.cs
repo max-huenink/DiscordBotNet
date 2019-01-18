@@ -7,6 +7,7 @@ using Discord.WebSocket;
 using Discord.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
+using System.IO;
 
 namespace discordBot
 {
@@ -16,6 +17,8 @@ namespace discordBot
         private readonly CommandService commands;
         private readonly IServiceProvider services;
         private Random rand;
+        private readonly string tokenPath;
+        private readonly string token;
 
         static void Main(string[] args) => new Program().Start(args).GetAwaiter().GetResult();
 
@@ -29,6 +32,22 @@ namespace discordBot
             });
             commands = new CommandService();
             services = new ServiceCollection().BuildServiceProvider();
+            tokenPath = "token.txt";
+            if (!File.Exists(tokenPath))
+            {
+                Console.WriteLine("What is the bot token?");
+                Console.Write("Token: ");
+                token = Console.ReadLine();
+                Console.Clear();
+                File.WriteAllText(tokenPath, token);
+                //File.Encrypt(tokenPath);
+            }
+            else
+            {
+                //File.Decrypt(tokenPath);
+                token = File.ReadLines(tokenPath).FirstOrDefault();
+                //File.Encrypt(tokenPath);
+            }
         }
 
         public async Task Start(string[] args)
@@ -51,8 +70,20 @@ namespace discordBot
             {
                 client.Ready += RoleLottery;
             }
-
-            await client.LoginAsync(TokenType.Bot, "MzgzMzA5MDU1Mzk0ODQwNTc3.DPkc0g.ehU_ZfUQpxe9wt83nimB-_d3LX0");
+            
+            try
+            {
+                await client.LoginAsync(TokenType.Bot, token);
+            }
+            catch (Exception)
+            {
+                Console.Clear();
+                Console.WriteLine("That token doesn't work, please try again.");
+                File.Delete(tokenPath);
+                Console.ReadLine();
+                new Program().Start(args).GetAwaiter().GetResult();
+            }
+            //await client.LoginAsync(TokenType.Bot, token);
             await client.StartAsync();
 
             await Task.Delay(-1);
