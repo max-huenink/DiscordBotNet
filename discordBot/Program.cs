@@ -176,7 +176,7 @@ namespace discordBot
             if (messageParam.Author.Id == client.CurrentUser.Id)
             {
                 Console.WriteLine("I sent a message!");
-                await client.SetGameAsync($"you for {sw.Elapsed.Days}:{sw.Elapsed.Hours}:{sw.Elapsed.Seconds}", type: ActivityType.Playing);
+                await client.SetGameAsync($"you for {sw.Elapsed.Days}:{sw.Elapsed.Hours}:{sw.Elapsed.Minutes}.{sw.Elapsed.Seconds}", type: ActivityType.Playing);
             }
         }
 
