@@ -26,9 +26,9 @@ namespace discordBot
         {
             get
             {
-                string days = (sw.Elapsed.Days < 10) ? "0" + sw.Elapsed.Days : sw.Elapsed.Days.ToString();
-                string hours = (sw.Elapsed.Hours < 10) ? "0" + sw.Elapsed.Hours : sw.Elapsed.Hours.ToString();
-                string minutes = (sw.Elapsed.Minutes < 10) ? "0" + sw.Elapsed.Minutes : sw.Elapsed.Minutes.ToString();
+                string days = ((sw.Elapsed.Days < 10) ? "0" : "") + sw.Elapsed.Days;
+                string hours = ((sw.Elapsed.Hours < 10) ? "0" : "") + sw.Elapsed.Hours;
+                string minutes = ((sw.Elapsed.Minutes < 10) ? "0" : "") + sw.Elapsed.Minutes;
                 return $"{days}:{hours}:{minutes}";
             }
         }
@@ -185,7 +185,7 @@ namespace discordBot
             client.MessageReceived += HandleCommand;
 
             client.Connected += async () => T.Start();
-            
+
             //client.MessageDeleted += HandleDelete;
             // Discover all of the commands in this assembly and load them.
             await commands.AddModulesAsync(Assembly.GetEntryAssembly(), services);
