@@ -29,8 +29,7 @@ namespace discordBot
                 string days = (sw.Elapsed.Days < 10) ? "0" + sw.Elapsed.Days : sw.Elapsed.Days.ToString();
                 string hours = (sw.Elapsed.Hours < 10) ? "0" + sw.Elapsed.Hours : sw.Elapsed.Hours.ToString();
                 string minutes = (sw.Elapsed.Minutes < 10) ? "0" + sw.Elapsed.Minutes : sw.Elapsed.Minutes.ToString();
-                string seconds = (sw.Elapsed.Seconds < 10) ? "0" + sw.Elapsed.Seconds : sw.Elapsed.Seconds.ToString();
-                return $"{days}:{hours}:{minutes}.{seconds}";
+                return $"{days}:{hours}:{minutes}";
             }
         }
 
@@ -74,7 +73,7 @@ namespace discordBot
                 while (true)
                 {
                     await UpdateUptime();
-                    await Task.Delay(45000);
+                    await Task.Delay(60000);
                 }
             });
         }
@@ -172,7 +171,7 @@ namespace discordBot
                 new RequestOptions { AuditLogReason = "Reset permssions" });
 
             msg += $"Participants: {string.Join(", ",participants.Select(a=>a.Username))}\n";
-            msg += $"This week's winner is: {winner.Username}!";
+            msg += $"This week's winner is: {winner.Mention}!";
 
             await (c as ISocketMessageChannel).SendMessageAsync(msg);
 
