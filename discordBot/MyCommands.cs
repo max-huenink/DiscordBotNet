@@ -127,7 +127,7 @@ namespace discordBot
         [Command("uptime")]
         public async Task Uptime()
         {
-            await ReplyAsync($"I have been running for {Program.sw.Elapsed.Days} days {Program.sw.Elapsed.Hours} hours {Program.sw.Elapsed.Minutes} minutes and {Program.sw.Elapsed.Seconds} seconds.");
+            await ReplyAsync($"I have been running for {Program.swElapsed}.");
         }
 
         [Command("help")]

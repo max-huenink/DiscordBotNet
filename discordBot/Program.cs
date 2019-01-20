@@ -21,11 +21,26 @@ namespace discordBot
         private readonly string tokenPath;
         private readonly string token;
         public static readonly Stopwatch sw = new Stopwatch();
+        // A string that specifies how long the bot has been running based on when it connected
+        public static string swElapsed
+        {
+            get
+            {
+                string days = (sw.Elapsed.Days < 10) ? "0" + sw.Elapsed.Days : sw.Elapsed.Days.ToString();
+                string hours = (sw.Elapsed.Hours < 10) ? "0" + sw.Elapsed.Hours : sw.Elapsed.Hours.ToString();
+                string minutes = (sw.Elapsed.Minutes < 10) ? "0" + sw.Elapsed.Minutes : sw.Elapsed.Minutes.ToString();
+                string seconds = (sw.Elapsed.Seconds < 10) ? "0" + sw.Elapsed.Seconds : sw.Elapsed.Seconds.ToString();
+                return $"{days}:{hours}:{minutes}.{seconds}";
+            }
+        }
+
+        readonly Task T;
 
         static void Main(string[] args) => new Program().Start(args).GetAwaiter().GetResult();
 
         public Program()
         {
+            // Sets things needed for Program()
             rand = new Random();
             client = new DiscordSocketClient(new DiscordSocketConfig
             {
@@ -51,6 +66,17 @@ namespace discordBot
                 // Reads the first line from the token file
                 token = File.ReadLines(tokenPath).FirstOrDefault();
             }
+
+            // Sets the task, T, to update the "playing" status with uptime every 45 seconds
+            T = new Task(async () =>
+            {
+                sw.Start();
+                while (true)
+                {
+                    await UpdateUptime();
+                    await Task.Delay(45000);
+                }
+            });
         }
 
         public async Task Start(string[] args)
@@ -64,7 +90,7 @@ namespace discordBot
                 arg = args[0];
             }
             // If there is no argument, install commands and run like normal
-            if (string.IsNullOrEmpty(arg))
+            if (string.IsNullOrEmpty(arg) || arg != "sbRoleLottery")
             {
                 await InstallCommands();
             }
@@ -89,7 +115,7 @@ namespace discordBot
             }
 
             await client.StartAsync();
-
+            //await a;
             await Task.Delay(-1);
         }
 
@@ -158,23 +184,17 @@ namespace discordBot
         {
             // Hook the MessageReceived Event into our Command Handler
             client.MessageReceived += HandleCommand;
-            client.MessageReceived += UpdateUptime;
 
-            client.Connected += async () =>
-            {
-                sw.Start();
-                await client.SetGameAsync($"m!help", type: ActivityType.Playing);
-            };
+            client.Connected += async () => T.Start();
             
             //client.MessageDeleted += HandleDelete;
             // Discover all of the commands in this assembly and load them.
             await commands.AddModulesAsync(Assembly.GetEntryAssembly(), services);
         }
 
-        public async Task UpdateUptime(SocketMessage messageParam)
+        public async Task UpdateUptime()
         {
-            if (messageParam.Author.Id == client.CurrentUser.Id)
-                await client.SetGameAsync($"m!help for {sw.Elapsed.Days}:{sw.Elapsed.Hours}:{sw.Elapsed.Minutes}.{sw.Elapsed.Seconds}", type: ActivityType.Playing);
+            await client.SetGameAsync($"m!help for {swElapsed}", type: ActivityType.Playing);
         }
 
         public async Task HandleCommand(SocketMessage messageParam)
@@ -193,6 +213,8 @@ namespace discordBot
             var result = await commands.ExecuteAsync(context, argPos, services);
             if (!result.IsSuccess)
                 await context.Channel.SendMessageAsync(result.ErrorReason);
+            // Update the uptime
+            await UpdateUptime();
         }
 
         public async Task HandleDelete(Cacheable<IMessage, ulong> message, ISocketMessageChannel channel)
@@ -205,15 +227,6 @@ namespace discordBot
         {
             Console.WriteLine(msg.ToString());
             return Task.CompletedTask;
-        }
-
-        private async Task MessageReceived(SocketMessage message)
-        {
-            Console.WriteLine($"Received message from {message.Author.Username} in {(message.Channel as IGuildChannel).Guild}#{message.Channel.Name}. Message contents:\n\t{message.Content}");
-            if (message.Content.ToLower() == "ping!")
-            {
-                await message.Channel.SendMessageAsync("Pong!");
-            }
         }
     }
 }
