@@ -34,7 +34,8 @@ namespace discordBot
         {
             if (content == null) // Exit if there wasn't an argument
                 return;
-
+            if(Context.Guild==null) // Checks if the message was sent in a guild
+                return;
             // Mentioned channel ids
             var channelID = Context.Message.MentionedChannelIds;
             // Mentioned role ids
