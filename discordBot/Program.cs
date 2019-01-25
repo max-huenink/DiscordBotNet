@@ -140,7 +140,7 @@ namespace discordBot
             string msg = "Lottery:\n";
             
             // Adds who the role was removed from to the message
-            msg += $"Took away {string.Join(", ", currentWinners.Select(currentWinner => currentWinner.Username))}\'s {winningRole.Name}\n";
+            msg += $"Took away {string.Join(", ", currentWinners.Select(user => user.Username))}\'s {winningRole.Name}\n";
 
             // Removes the winning role from anyone who currently has it
             foreach (var user in currentWinners)

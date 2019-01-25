@@ -154,7 +154,7 @@ namespace discordBot
             await ReplyAsync(
                 "Roles:\n" +
                 g.Roles.OrderByDescending(p => p.Position).
-                    Aggregate<IRole, string>(string.Empty, (a, b) => (a += $"{b.Position} {b.Name}: {b.Id}\n")));
+                    Aggregate(string.Empty, (a, b) => (a += $"{b.Position} {b.Name}: {b.Id}\n")));
         }
 
         [Command("echo")]
