@@ -132,6 +132,12 @@ namespace discordBot
             await ReplyAsync($"I have been running for {Program.swElapsed}.");
         }
 
+        [Command("sl")]
+        public async Task SL()
+        {
+            await ReplyAsync(embed: new EmbedBuilder().WithImageUrl("https://d2m4k8kmjwceyr.cloudfront.net/app/uploads/2019/01/sl.gif").Build());
+        }
+
         [Command("help")]
         public async Task Help()
         {
