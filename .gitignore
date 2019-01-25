@@ -259,3 +259,7 @@ paket-files/
 # Python Tools for Visual Studio (PTVS)
 __pycache__/
 *.pyc
+
+# We don't need VSCode launch.json or tasks.json
+.vscode/launch.json
+.vscode/tasks.json
