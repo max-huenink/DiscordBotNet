@@ -33,7 +33,7 @@ namespace discordBot
             }
         }
 
-        readonly Task T;
+        readonly Task syncUptime;
 
         static void Main(string[] args) => new Program().Start(args).GetAwaiter().GetResult();
 
@@ -67,7 +67,7 @@ namespace discordBot
             }
 
             // Sets the task, T, to update the "playing" status with uptime every 45 seconds
-            T = new Task(async () =>
+            syncUptime = new Task(async () =>
             {
                 sw.Start();
                 while (true)
@@ -120,60 +120,60 @@ namespace discordBot
 
         public async Task RoleLottery()
         {
-            IGuild g = client.GetGuild(259533308512174081) as IGuild; // Spirit Bear Guild
-            IGuildChannel c = await g.GetChannelAsync(335460607279235072); // Announcement channel
-            IVoiceChannel v = await g.GetVoiceChannelAsync(434092857415041024); // The winner's voice channel
-            IRole e = g.EveryoneRole; // The everyone role
-            IRole l = g.GetRole(411281455331672064); // The lottery role
-            IRole w = g.GetRole(335456437352529921); // The winning role
+            IGuild guild = client.GetGuild(259533308512174081) as IGuild; // Spirit Bear Guild
+            IGuildChannel announce = await guild.GetChannelAsync(335460607279235072); // Announcement channel
+            IVoiceChannel voice = await guild.GetVoiceChannelAsync(434092857415041024); // The winner's voice channel
+            IRole everyone = guild.EveryoneRole; // The everyone role
+            IRole participantRole = guild.GetRole(411281455331672064); // The lottery role
+            IRole winningRole = guild.GetRole(335456437352529921); // The winning role
             // All users in the guild
-            var users = await g.GetUsersAsync();
+            var users = await guild.GetUsersAsync();
 
             // All possible participants
-            IEnumerable<IGuildUser> participants = users.Where(a => a.RoleIds.Any(b => b == l.Id));
+            IEnumerable<IGuildUser> participants = users.Where(user => user.RoleIds.Any(roleID => roleID == participantRole.Id));
             // Everyone who currently has the winning role
-            IEnumerable<IGuildUser> currentWinners = users.Where(a => a.RoleIds.Any(b => b == w.Id));
+            IEnumerable<IGuildUser> currentWinners = users.Where(user => user.RoleIds.Any(roleID => roleID == winningRole.Id));
             
             // Removes any current winner from the participants list
-            participants.ToList().RemoveAll(a => currentWinners.Any(b => a == b));
+            participants.ToList().RemoveAll(participant => currentWinners.Any(currentWinner => participant == currentWinner));
 
             string msg = "Lottery:\n";
             
             // Adds who the role was removed from to the message
-            msg += $"Took away {string.Join(", ", currentWinners.Select(a => a.Username))}\'s {w.Name}\n";
+            msg += $"Took away {string.Join(", ", currentWinners.Select(currentWinner => currentWinner.Username))}\'s {winningRole.Name}\n";
 
             // Removes the winning role from anyone who currently has it
             foreach (var user in currentWinners)
-                await user.RemoveRoleAsync(w, new RequestOptions { AuditLogReason = $"Previous {w.Name}" });
+                await user.RemoveRoleAsync(winningRole, new RequestOptions { AuditLogReason = $"Previous {winningRole.Name}" });
 
             // Randomly selects the winner
             IGuildUser winner = participants.ElementAt(rand.Next(0, participants.Count()));
 
             // Gives the winner their role
-            await winner.AddRoleAsync(w, new RequestOptions { AuditLogReason = $"The new {w.Name} is in town" });
+            await winner.AddRoleAsync(winningRole, new RequestOptions { AuditLogReason = $"The new {winningRole.Name} is in town" });
 
             // Edits the winner's voice channel name
-            await v.ModifyAsync((VoiceChannelProperties p) =>
+            await voice.ModifyAsync((VoiceChannelProperties p) =>
             {
                 p.Name = $"{winner.Username}\'s Executive Suite";
                 p.Bitrate = 64000;
             }, new RequestOptions { AuditLogReason = "Reset and rename" });
 
             // Resets permissions to their 'default' values
-            await v.SyncPermissionsAsync(new RequestOptions { AuditLogReason = "Reset permissions" });
+            await voice.SyncPermissionsAsync(new RequestOptions { AuditLogReason = "Reset permissions" });
             // Edits everyone role permission overwrites
-            await v.AddPermissionOverwriteAsync(e,
+            await voice.AddPermissionOverwriteAsync(everyone,
                 new OverwritePermissions(connect: PermValue.Deny, moveMembers: PermValue.Deny),
                 new RequestOptions { AuditLogReason = "Reset permissions" });
             // Edits winner role permission overwrites
-            await v.AddPermissionOverwriteAsync(w,
+            await voice.AddPermissionOverwriteAsync(winningRole,
                 new OverwritePermissions(connect: PermValue.Allow, moveMembers: PermValue.Allow),
                 new RequestOptions { AuditLogReason = "Reset permssions" });
 
-            msg += $"Participants: {string.Join(", ",participants.Select(a=>a.Username))}\n";
+            msg += $"Participants: {string.Join(", ", participants.Select(participant => participant.Username))}\n";
             msg += $"This week's winner is: {winner.Mention}!";
 
-            await (c as ISocketMessageChannel).SendMessageAsync(msg);
+            await (announce as ISocketMessageChannel).SendMessageAsync(msg);
 
             await client.StopAsync();
             Environment.Exit(0);
@@ -184,7 +184,7 @@ namespace discordBot
             // Hook the MessageReceived Event into our Command Handler
             client.MessageReceived += HandleCommand;
 
-            client.Connected += async () => T.Start();
+            client.Connected += async () => syncUptime.Start();
 
             //client.MessageDeleted += HandleDelete;
             // Discover all of the commands in this assembly and load them.
