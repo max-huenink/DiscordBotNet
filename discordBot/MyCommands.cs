@@ -23,7 +23,8 @@ namespace discordBot
 
     public abstract class Commands : ModuleBase
     {
-        protected readonly static ulong[] BotMods = new ulong[] { 259532984909168659, 212687824816701441 };
+        protected readonly static ulong BotOwner = 259532984909168659;
+        protected readonly static ulong[] BotMods = new ulong[] { BotOwner, 212687824816701441 };
         protected bool IsBotMod(IUser user) => BotMods.Contains(user.Id);
     }
 
@@ -59,7 +60,7 @@ namespace discordBot
             IVoiceChannel destChannel = null;
 
             // Attempts to parse the last argument, removing non-digit chars, to an id
-            ulong.TryParse(new string(lastArg.Where(c => char.IsLetterOrDigit(c)).ToArray()), out ulong lastArgID);
+            ulong.TryParse(new string(lastArg.Where(character => char.IsLetterOrDigit(character)).ToArray()), out ulong lastArgID);
             
             // Attempt to find destination user based on lastArgID
             destUser = await Context.Guild.GetUserAsync(lastArgID);
@@ -111,7 +112,7 @@ namespace discordBot
             teleport = teleport.Distinct().ToList();
 
             // Removes the destination user and any user in the afk channel from the teleport list
-            teleport.RemoveAll(a => a == destUser || a.VoiceChannel == afkChannel || a.VoiceChannel == destChannel);
+            teleport.RemoveAll(user => user == destUser || user.VoiceChannel == afkChannel || user.VoiceChannel == destChannel);
 
             if (!author.GetPermissions(destChannel).MoveMembers) // If the author doesn't have move permissions for the destination channel, exit
             {
@@ -120,7 +121,7 @@ namespace discordBot
             }
 
             foreach (var user in teleport) // Teleport every user in the list
-                await user.ModifyAsync(a => a.Channel = new Optional<IVoiceChannel>(destChannel));
+                await user.ModifyAsync(userVoiceProperty => userVoiceProperty.Channel = new Optional<IVoiceChannel>(destChannel));
 
             await ReplyAsync($"Teleported {teleport.Count} user(s) to \"{destChannel.Name}\"");
         }
@@ -165,14 +166,12 @@ namespace discordBot
         [Command("exit")]
         public async Task Exit()
         {
+            // Don't exit unless the author of the command is the Bot Owner
+            if (Context.Message.Author.Id != BotOwner)
+                return;
+
             await Context.Client.StopAsync();
             Environment.Exit(0);
-        }
-
-        [Command("repeat")]
-        public async Task Repeat([Remainder]string input)
-        {
-            await ReplyAsync($"{Context.Message.Author.Mention} said: {input}");
         }
     }
 }
