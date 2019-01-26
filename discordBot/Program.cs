@@ -34,6 +34,7 @@ namespace discordBot
         }
 
         readonly Task syncUptime;
+        public IMessageChannel botLogChannel;
 
         static void Main(string[] args) => new Program().Start(args).GetAwaiter().GetResult();
 
@@ -44,7 +45,7 @@ namespace discordBot
             client = new DiscordSocketClient(new DiscordSocketConfig
             {
                 LogLevel = LogSeverity.Verbose,
-                //MessageCacheSize = 20,
+                MessageCacheSize = 100,
             });
             commands = new CommandService();
             services = new ServiceCollection().BuildServiceProvider();
@@ -114,8 +115,95 @@ namespace discordBot
             }
 
             await client.StartAsync();
-            //await a;
+            
             await Task.Delay(-1);
+        }
+
+        public async Task InstallCommands()
+        {
+            // Hook the MessageReceived Event into our Command Handler
+            client.MessageReceived += HandleCommand;
+
+            client.UserVoiceStateUpdated += MovedMember;
+            client.UserJoined += UserJoin;
+            client.UserLeft += UserLeft;
+            client.MessageUpdated += HandleUpdate;
+            client.Ready += SetVars;
+
+            client.Connected += async () =>
+            {
+                syncUptime.Start();
+                await Task.Delay(1);
+            };
+
+            //client.MessageDeleted += HandleDelete;
+            // Discover all of the commands in this assembly and load them.
+            await commands.AddModulesAsync(Assembly.GetEntryAssembly(), services);
+        }
+
+        public async Task SetVars()
+        {
+            botLogChannel = client.GetChannel(538787160674009088) as IMessageChannel;
+            await Task.Delay(1);
+        }
+
+        public async Task UserJoin(SocketGuildUser user)
+        {
+            await botLogChannel.SendMessageAsync($"`{user.Username}` joined `{user.Guild}`");
+        }
+
+        public async Task UserLeft(SocketGuildUser user)
+        {
+            await botLogChannel.SendMessageAsync($"`{user.Username}` left `{user.Guild}`");
+        }
+
+        public async Task MovedMember(SocketUser user, SocketVoiceState state1, SocketVoiceState state2)
+        {
+            await botLogChannel.SendMessageAsync($"{user.Username} switched from " +
+                $"`{state1.VoiceChannel.Name}` to `{state2.VoiceChannel.Name}` " +
+                $"in `{state2.VoiceChannel.Guild.Name}`");
+        }
+
+        public async Task HandleCommand(SocketMessage messageParam)
+        {
+            // Don't process the command if it was a System Message
+            var message = messageParam as SocketUserMessage;
+            if (message == null) return;
+            // Create a number to track where the prefix ends and the command begins
+            int argPos = 0;
+            // Determine if the message is a command, based on if it starts with '!' or a mention prefix
+            if (!(message.HasStringPrefix("m!", ref argPos) || message.HasMentionPrefix(client.CurrentUser, ref argPos))) return;
+            // Create a Command Context
+            var context = new CommandContext(client, message);
+            // Execute the command. (result does not indicate a return value, 
+            // rather an object stating if the command executed successfully)
+            var result = await commands.ExecuteAsync(context, argPos, services);
+            if (!result.IsSuccess)
+                await context.Channel.SendMessageAsync(result.ErrorReason);
+            // Update the uptime
+            await UpdateUptime();
+        }
+
+        public async Task HandleUpdate(Cacheable<IMessage, ulong> cacheMsg, SocketMessage message, ISocketMessageChannel channel)
+        {
+            await HandleCommand(message);
+        }
+
+        public async Task HandleDelete(Cacheable<IMessage, ulong> message, ISocketMessageChannel channel)
+        {
+            IMessage msg = await message.GetOrDownloadAsync();
+            await botLogChannel.SendMessageAsync($"The deleted message was from {msg.Author} and was: ```{msg.Content}```");
+        }
+
+        public async Task UpdateUptime()
+        {
+            await client.SetGameAsync($"m!help for {swElapsed}", type: ActivityType.Playing);
+        }
+
+        private Task Logger(LogMessage msg)
+        {
+            Console.WriteLine(msg.ToString());
+            return Task.CompletedTask;
         }
 
         public async Task RoleLottery()
@@ -133,12 +221,12 @@ namespace discordBot
             IEnumerable<IGuildUser> participants = users.Where(user => user.RoleIds.Any(roleID => roleID == participantRole.Id));
             // Everyone who currently has the winning role
             IEnumerable<IGuildUser> currentWinners = users.Where(user => user.RoleIds.Any(roleID => roleID == winningRole.Id));
-            
+
             // Removes any current winner from the participants list
             participants.ToList().RemoveAll(participant => currentWinners.Any(currentWinner => participant == currentWinner));
 
             string msg = "Lottery:\n";
-            
+
             // Adds who the role was removed from to the message
             msg += $"Took away {string.Join(", ", currentWinners.Select(user => user.Username))}\'s {winningRole.Name}\n";
 
@@ -177,55 +265,6 @@ namespace discordBot
 
             await client.StopAsync();
             Environment.Exit(0);
-        }
-
-        public async Task InstallCommands()
-        {
-            // Hook the MessageReceived Event into our Command Handler
-            client.MessageReceived += HandleCommand;
-
-            client.Connected += async () => syncUptime.Start();
-
-            //client.MessageDeleted += HandleDelete;
-            // Discover all of the commands in this assembly and load them.
-            await commands.AddModulesAsync(Assembly.GetEntryAssembly(), services);
-        }
-
-        public async Task UpdateUptime()
-        {
-            await client.SetGameAsync($"m!help for {swElapsed}", type: ActivityType.Playing);
-        }
-
-        public async Task HandleCommand(SocketMessage messageParam)
-        {
-            // Don't process the command if it was a System Message
-            var message = messageParam as SocketUserMessage;
-            if (message == null) return;
-            // Create a number to track where the prefix ends and the command begins
-            int argPos = 0;
-            // Determine if the message is a command, based on if it starts with '!' or a mention prefix
-            if (!(message.HasStringPrefix("m!", ref argPos) || message.HasMentionPrefix(client.CurrentUser, ref argPos))) return;
-            // Create a Command Context
-            var context = new CommandContext(client, message);
-            // Execute the command. (result does not indicate a return value, 
-            // rather an object stating if the command executed successfully)
-            var result = await commands.ExecuteAsync(context, argPos, services);
-            if (!result.IsSuccess)
-                await context.Channel.SendMessageAsync(result.ErrorReason);
-            // Update the uptime
-            await UpdateUptime();
-        }
-
-        public async Task HandleDelete(Cacheable<IMessage, ulong> message, ISocketMessageChannel channel)
-        {
-            IMessage x = await message.GetOrDownloadAsync();
-            await x.Channel.SendMessageAsync($"The deleted message was from {x.Author} and was: {x.Content}");
-        }
-
-        private Task Logger(LogMessage msg)
-        {
-            Console.WriteLine(msg.ToString());
-            return Task.CompletedTask;
         }
     }
 }
