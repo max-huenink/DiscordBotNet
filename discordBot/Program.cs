@@ -36,7 +36,7 @@ namespace discordBot
         readonly Task syncUptime;
         public IMessageChannel botLogChannel;
 
-        static void Main(string[] args) => new Program().Start(args).GetAwaiter().GetResult();
+        static void Main(string[] args) => new Program().Start(/*args*/).GetAwaiter().GetResult();
 
         public Program()
         {
@@ -79,11 +79,11 @@ namespace discordBot
             });
         }
 
-        public async Task Start(string[] args)
+        public async Task Start(/*string[] args*/)
         {
             // Adds the logger
             client.Log += Logger;
-
+            /*
             string arg = string.Empty;
             if (args.Length > 0)
             {
@@ -99,7 +99,10 @@ namespace discordBot
             {
                 client.Ready += RoleLottery;
             }
-            
+            */
+
+            await InstallCommands();
+
             // Tries to login, if it fails the token is probably incorrect (or discord is down)
             try
             {
@@ -137,8 +140,14 @@ namespace discordBot
             };
 
             //client.MessageDeleted += HandleDelete;
+
             // Discover all of the commands in this assembly and load them.
             await commands.AddModulesAsync(Assembly.GetEntryAssembly(), services);
+
+            MyScheduler.NewTask(new DateTime(2019, 2, 3), TimeSpan.FromDays(7),
+            async () => {
+                await RoleLottery();
+            }, "lottery");
         }
 
         public async Task SetVars()

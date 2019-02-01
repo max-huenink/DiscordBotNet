@@ -30,12 +30,40 @@ namespace discordBot
 
     public class TextCommands : Commands
     {
+        [Command("remind")]
+        public async Task Remind([Remainder]string input)
+        {
+            if (input == null) // Exit if there wasn't an argument
+                return;
+            string[] splitContent = input.Split(new char[] { ' ' });
+
+            int seconds = 0;
+            splitContent.FirstOrDefault(a => int.TryParse(a, out seconds));
+
+            if (seconds == 0) // Exit if there is no reminder time
+                return;
+
+            string reminder = "nothing";
+            if (splitContent.Length > 1)
+                reminder = string.Join(' ', splitContent.AsSpan(1).ToArray());
+
+            string message = $"Hey! Listen! {Context.Message.Author.Mention}. You asked me to remind you about {reminder}. Here's your reminder!";
+
+            MyScheduler.RunOnce(DateTime.Now.AddSeconds(seconds),
+                async () =>
+                {
+                    await ReplyAsync(message);
+                });
+
+            await ReplyAsync($"Okay, I will remind you about {reminder} in {seconds} seconds");
+        }
+
         [Command("tp")]
         public async Task TP([Remainder]string content)
         {
             if (content == null) // Exit if there wasn't an argument
                 return;
-            if(Context.Guild==null) // Checks if the message was sent in a guild
+            if (Context.Guild == null) // Checks if the message was sent in a guild
                 return;
             // Mentioned channel ids
             var channelID = Context.Message.MentionedChannelIds;
@@ -142,8 +170,9 @@ namespace discordBot
         public async Task Help()
         {
             await ReplyAsync($"Here is a list of available commands:\n" +
-                $"\tm!tp\n\t\tMoves the user to the specified user or voice channel, specify a voice channel by its ID" +
-                $"\tm!uptime\n\t\tReports how long the bot has been running" +
+                $"\tm!remind `seconds` `message`\n\t\tReminds you about `message` specified `seconds` after sending command\n" +
+                $"\tm!tp\n\t\tMoves the user to the specified user or voice channel, specify a voice channel by its ID\n" +
+                $"\tm!uptime\n\t\tReports how long the bot has been running\n" +
                 $"\tm!help\n\t\tShows this help dialog.");
         }
     }
@@ -152,6 +181,17 @@ namespace discordBot
     [RequireBotMod()]
     public class DebugCommands : Commands
     {
+        /*
+        [Command("schedule")]
+        public async Task Schedule([Remainder]string input)
+        {
+            if (input == null) // Exit if there wasn't an argument
+                return;
+            string[] splitContent = input.Split(new char[] { ' ' });
+
+
+        }
+        */
         [Command("roles")]
         public async Task GetRoles()
         {
