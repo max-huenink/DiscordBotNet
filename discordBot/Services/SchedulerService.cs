@@ -10,8 +10,7 @@ namespace discordBot.Services
         // https://codinginfinite.com/creating-scheduler-task-seconds-minutes-hours-days/
 
         private static SchedulerService _instance;
-        //private List<Timer> timers = new List<Timer>();
-        private Dictionary<string, Timer> timers = new Dictionary<string, Timer>();
+        private List<Timer> timers = new List<Timer>();
         private SchedulerService() { }
         public static SchedulerService Instance => _instance ?? (_instance = new SchedulerService());
 
@@ -22,7 +21,7 @@ namespace discordBot.Services
         /// <param name="interval">How often to run the task, TimeSpan.FromMilliseconds(-1) for never again</param>
         /// <param name="task">The task to run</param>
         /// <param name="identifier">The identifier of the task to be easily deletable</param>
-        public void ScheduleTask(DateTime firstRun, TimeSpan interval, Action task, string identifier = null)
+        public void ScheduleTask(DateTime firstRun, TimeSpan interval, Action task)
         {
             DateTime now = DateTime.Now;
             while (now > firstRun)
@@ -37,8 +36,7 @@ namespace discordBot.Services
                 task.Invoke();
             }, null, timeToGo, interval);
 
-            if (interval > TimeSpan.Zero)
-                timers.Add(identifier, timer);
+            timers.Add(timer);
         }
 
         /// <summary>
@@ -49,12 +47,12 @@ namespace discordBot.Services
         /// <param name="interval">How often to run the task, TimeSpan.FromMilliseconds(-1) for never again</param>
         /// <param name="task">The task to run</param>
         /// <param name="identifier">The identifier of the task to be easily deletable</param>
-        public void ScheduleTask(int hour, int min, TimeSpan interval, Action task, string identifier = null)
+        public void ScheduleTask(int hour, int min, TimeSpan interval, Action task)
         {
             DateTime now = DateTime.Now;
             DateTime firstRun = new DateTime(now.Year, now.Month, now.Day, hour, min, 0, 0);
 
-            ScheduleTask(firstRun, interval, task, identifier);
+            ScheduleTask(firstRun, interval, task);
         }
 
         /// <summary>
@@ -70,7 +68,7 @@ namespace discordBot.Services
             DateTime now = DateTime.Now;
             DateTime firstRun = new DateTime(now.Year, now.Month, now.Day, hour, min, 0, 0);
 
-            ScheduleTask(firstRun, TimeSpan.FromHours(intervalInHour), task, identifier);
+            ScheduleTask(firstRun, TimeSpan.FromHours(intervalInHour), task);
         }
 
         /// <summary>
@@ -86,8 +84,7 @@ namespace discordBot.Services
                 task.Invoke();
             }, null, TimeSpan.Zero, interval);
 
-            if (interval > TimeSpan.Zero)
-                timers.Add(identifier, timer);
+            timers.Add(timer);
         }
     }
 }

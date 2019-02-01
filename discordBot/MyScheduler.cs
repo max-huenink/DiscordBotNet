@@ -25,7 +25,7 @@ namespace discordBot
         /// <param name="task">The task to run</param>
         public static void RunOnce(DateTime start, Action task)
         {
-            SchedulerService.Instance.ScheduleTask(start, TimeSpan.FromMilliseconds(-1), task, null);
+            SchedulerService.Instance.ScheduleTask(start, TimeSpan.FromMilliseconds(-1), task);
         }
 
         /// <summary>
@@ -37,7 +37,7 @@ namespace discordBot
         /// <param name="identifier">The identifier of the task</param>
         public static void NewTask(DateTime start, TimeSpan interval, Action task, string identifier)
         {
-            SchedulerService.Instance.ScheduleTask(start, interval, task, identifier);
+            SchedulerService.Instance.ScheduleTask(start, interval, task);
         }
 
         /*
