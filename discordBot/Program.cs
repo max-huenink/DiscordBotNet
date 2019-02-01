@@ -114,7 +114,7 @@ namespace discordBot
                 Console.WriteLine("That token doesn't work, or Discord may be down, please try again.");
                 File.Delete(tokenPath);
                 Console.ReadLine();
-                new Program().Start(args).GetAwaiter().GetResult();
+                new Program().Start(/*args*/).GetAwaiter().GetResult();
             }
 
             await client.StartAsync();
