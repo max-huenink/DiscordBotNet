@@ -47,7 +47,7 @@ namespace discordBot
             if (splitContent.Length > 1)
                 reminder = string.Join(' ', splitContent.AsSpan(1).ToArray());
 
-            string message = $"Hey! Listen! {Context.Message.Author.Mention}. You asked me to remind you about {reminder}. Here's your reminder!";
+            string message = $"Hey! Listen! {Context.Message.Author.Mention}. You asked me to remind you about \"{reminder}\". Here's your reminder!";
 
             MyScheduler.RunOnce(DateTime.Now.AddSeconds(seconds),
                 async () =>
@@ -55,7 +55,7 @@ namespace discordBot
                     await ReplyAsync(message);
                 });
 
-            await ReplyAsync($"Okay, I will remind you about {reminder} in {seconds} seconds");
+            await ReplyAsync($"Okay, I will remind you about \"{reminder}\" in {seconds} seconds");
         }
 
         [Command("tp")]
