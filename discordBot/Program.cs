@@ -144,10 +144,11 @@ namespace discordBot
             // Discover all of the commands in this assembly and load them.
             await commands.AddModulesAsync(Assembly.GetEntryAssembly(), services);
 
-            MyScheduler.NewTask(new DateTime(2019, 2, 3), TimeSpan.FromDays(7),
+            MyScheduler.NewTask(new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 6, 0, 0).
+                AddDays(7 - (int)DateTime.Now.DayOfWeek), TimeSpan.FromDays(7),
             async () => {
                 await RoleLottery();
-            }, "lottery");
+            }, $"lottery{GetHashCode()}");
         }
 
         public async Task SetVars()
