@@ -40,7 +40,7 @@ namespace discordBot
             int seconds = 0;
             splitContent.FirstOrDefault(a => int.TryParse(a, out seconds));
 
-            if (seconds == 0) // Exit if there is no reminder time
+            if (seconds <= 0) // Exit if there is no reminder time
                 return;
 
             string reminder = "nothing";
