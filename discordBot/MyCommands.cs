@@ -38,9 +38,9 @@ namespace discordBot
             string[] splitContent = input.Split(new char[] { ' ' });
 
             int seconds = 0;
-            splitContent.FirstOrDefault(a => int.TryParse(a, out seconds));
+            splitContent.FirstOrDefault(word => int.TryParse(word, out seconds));
 
-            if (seconds <= 0) // Exit if there is no reminder time
+            if (604800 <= seconds || seconds <= 0) // Exit if the reminder time is out of bounds
                 return;
 
             string reminder = "nothing";
