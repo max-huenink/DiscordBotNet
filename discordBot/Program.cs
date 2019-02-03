@@ -83,23 +83,6 @@ namespace discordBot
         {
             // Adds the logger
             client.Log += Logger;
-            /*
-            string arg = string.Empty;
-            if (args.Length > 0)
-            {
-                arg = args[0];
-            }
-            // If there is no argument, install commands and run like normal
-            if (string.IsNullOrEmpty(arg) || arg != "sbRoleLottery")
-            {
-                await InstallCommands();
-            }
-            // If "sbRoleLottery" is the first argument, run the lottery instead of normal operation
-            else if (arg == "sbRoleLottery")
-            {
-                client.Ready += RoleLottery;
-            }
-            */
 
             await InstallCommands();
 
@@ -272,9 +255,6 @@ namespace discordBot
             msg += $"This week's winner is: {winner.Mention}!";
 
             await (announce as ISocketMessageChannel).SendMessageAsync(msg);
-
-            await client.StopAsync();
-            Environment.Exit(0);
         }
     }
 }
