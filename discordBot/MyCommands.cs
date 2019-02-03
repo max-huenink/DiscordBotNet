@@ -182,18 +182,18 @@ namespace discordBot
             int die1 = Program.rand.Next(1, 6);
             int die2 = Program.rand.Next(1, 6);
 
-            await ReplyAsync($"You rolled a {die1} and a {die2}.");
+            await ReplyAsync($"{Context.User.Username} rolled a {die1} and a {die2}.");
 
             if (die1 == 1 && die2 == 1)
             {
                 BotUsers.IgnoredUsers.Add(Context.User.Id);
-                await ReplyAsync("Your commands will be ignored for 5 minutes");
+                await ReplyAsync($"{Context.User.Username}'s commands will be ignored for 5 minutes");
 
                 MyScheduler.RunOnce(DateTime.Now.AddMinutes(5),
                     async () =>
                     {
                         BotUsers.IgnoredUsers.Remove(Context.User.Id);
-                        await ReplyAsync("Your time is up.");
+                        await ReplyAsync($"Your time is up, {Context.User.Username}.");
                     });
             }
         }
