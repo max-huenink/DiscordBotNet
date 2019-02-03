@@ -12,23 +12,33 @@ namespace discordBot
 {
     public class RequireBotMod : PreconditionAttribute
     {
-        protected readonly static ulong[] BotMods = new ulong[] { 259532984909168659, 212687824816701441 };
-        protected bool IsBotMod(IUser user) => BotMods.Contains(user.Id);
-
         public override Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services) =>
-            Task.Run(() => IsBotMod(context.User) ?
+            Task.Run(() => BotUsers.IsBotMod(context.User) ?
                 PreconditionResult.FromSuccess() :
                 PreconditionResult.FromError($"{context.User.Username} is not a bot mod"));
     }
 
-    public abstract class Commands : ModuleBase
+    public class CheckIgnore : PreconditionAttribute
     {
-        protected readonly static ulong BotOwner = 259532984909168659;
-        protected readonly static ulong[] BotMods = new ulong[] { BotOwner, 212687824816701441 };
-        protected bool IsBotMod(IUser user) => BotMods.Contains(user.Id);
+        public override Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services) =>
+            Task.Run(() => BotUsers.IsIgnored(context.User) ?
+                //PreconditionResult.FromError($"{context.User.Username} is an ignored user") :
+                PreconditionResult.FromError("Did you hear something?") :
+                PreconditionResult.FromSuccess());
     }
 
-    public class TextCommands : Commands
+    public static class BotUsers
+    {
+        public readonly static ulong Owner = 259532984909168659;
+        public readonly static ulong[] Mods = new ulong[] { Owner, 212687824816701441 };
+        public static bool IsBotMod(IUser user) => Mods.Contains(user.Id);
+
+        public static List<ulong> IgnoredUsers = new List<ulong>();
+        public static bool IsIgnored(IUser user) => IgnoredUsers.Contains(user.Id);
+    }
+
+    [CheckIgnore()]
+    public class TextCommands : ModuleBase
     {
         [Command("remind")]
         public async Task Remind([Remainder]string input)
@@ -40,7 +50,7 @@ namespace discordBot
             int seconds = 0;
             splitContent.FirstOrDefault(word => int.TryParse(word, out seconds));
 
-            if (604800 <= seconds || seconds <= 0) // Exit if the reminder time is out of bounds
+            if (608400 <= seconds || seconds <= 0) // Exit if the reminder time is out of bounds
                 return;
 
             string reminder = "nothing";
@@ -124,7 +134,7 @@ namespace discordBot
             if (splitContent.Length == 1) // If there was only one argument, add the author to the teleport list
                 teleport.Add(author);
 
-            if (IsBotMod(author)) // If the author is a bot mod
+            if (BotUsers.IsBotMod(author)) // If the author is a bot mod
             {
                 if (splitContent.Length == 1 && destUser==null) // If there wasn't a user specified and there was only one argument, teleport everyone in voice
                     foreach (IGuildUser user in candidates.Where(a => !string.IsNullOrEmpty(a.VoiceSessionId)))
@@ -166,20 +176,43 @@ namespace discordBot
             await ReplyAsync(embed: new EmbedBuilder().WithImageUrl("https://d2m4k8kmjwceyr.cloudfront.net/app/uploads/2019/01/sl.gif").Build());
         }
 
+        [Command("roll")]
+        public async Task Roll()
+        {
+            int die1 = Program.rand.Next(1, 6);
+            int die2 = Program.rand.Next(1, 6);
+
+            await ReplyAsync($"You rolled a {die1} and a {die2}.");
+
+            if (die1 == 1 && die2 == 1)
+            {
+                BotUsers.IgnoredUsers.Add(Context.User.Id);
+                await ReplyAsync("Your commands will be ignored for 5 minutes");
+
+                MyScheduler.RunOnce(DateTime.Now.AddMinutes(5),
+                    async () =>
+                    {
+                        BotUsers.IgnoredUsers.Remove(Context.User.Id);
+                        await ReplyAsync("Your time is up.");
+                    });
+            }
+        }
+
         [Command("help")]
         public async Task Help()
         {
             await ReplyAsync($"Here is a list of available commands:\n" +
-                $"\tm!remind `seconds` `message`\n\t\tReminds you about `message` specified `seconds` after sending command\n" +
-                $"\tm!tp\n\t\tMoves the user to the specified user or voice channel, specify a voice channel by its ID\n" +
-                $"\tm!uptime\n\t\tReports how long the bot has been running\n" +
-                $"\tm!help\n\t\tShows this help dialog.");
+                $"m!remind `seconds` `message`\n\tReminds you about `message` specified `seconds` after sending command\n" +
+                $"m!tp\n\tMoves the user to the specified user or voice channel, specify a voice channel by its ID\n" +
+                $"m!roll\n\tRolls two dice, if you roll snake eyes your commands are ignored for 5 minutes" +
+                $"m!uptime\n\tReports how long the bot has been running\n" +
+                $"m!help\n\tShows this help dialog.");
         }
     }
 
     [Group("debug")]
     [RequireBotMod()]
-    public class DebugCommands : Commands
+    public class DebugCommands : ModuleBase
     {
         /*
         [Command("schedule")]
@@ -213,7 +246,7 @@ namespace discordBot
         public async Task Exit()
         {
             // Don't exit unless the author of the command is the Bot Owner
-            if (Context.Message.Author.Id != BotOwner)
+            if (Context.Message.Author.Id != BotUsers.Owner)
                 return;
 
             await Context.Client.StopAsync();

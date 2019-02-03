@@ -17,7 +17,7 @@ namespace discordBot
         private readonly DiscordSocketClient client;
         private readonly CommandService commands;
         private readonly IServiceProvider services;
-        private Random rand;
+        public static Random rand;
         private readonly string tokenPath;
         private readonly string token;
         public static readonly Stopwatch sw = new Stopwatch();
