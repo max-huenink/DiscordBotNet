@@ -187,13 +187,13 @@ namespace discordBot
             if (die1 == 1 && die2 == 1)
             {
                 BotUsers.IgnoredUsers.Add(Context.User.Id);
-                await ReplyAsync($"{Context.User.Username}'s commands will be ignored for 5 minutes");
+                await ReplyAsync($"{Context.User.Username}'s commands will be ignored for 5 minutes.");
 
                 MyScheduler.RunOnce(DateTime.Now.AddMinutes(5),
                     async () =>
                     {
                         BotUsers.IgnoredUsers.Remove(Context.User.Id);
-                        await ReplyAsync($"Your time is up, {Context.User.Username}.");
+                        await ReplyAsync($"It's been five minutes {Context.User.Username}.");
                     });
             }
         }
