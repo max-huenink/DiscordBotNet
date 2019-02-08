@@ -211,7 +211,7 @@ namespace discordBot
             }
 
             if (!string.IsNullOrEmpty(message))
-                await botLogChannel.SendMessageAsync(message);
+                await botLogChannel.SendMessageAsync($"{preText} {message}");
         }
 
         public async Task HandleCommand(SocketMessage messageParam)

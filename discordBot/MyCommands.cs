@@ -99,7 +99,7 @@ namespace discordBot
 
             // Attempts to parse the last argument, removing non-digit chars, to an id
             ulong.TryParse(new string(lastArg.Where(character => char.IsLetterOrDigit(character)).ToArray()), out ulong lastArgID);
-            
+
             // Attempt to find destination user based on lastArgID
             destUser = await Context.Guild.GetUserAsync(lastArgID);
             // Attempt to find destination channel based on lastArgID
@@ -136,7 +136,7 @@ namespace discordBot
 
             if (BotUsers.IsBotMod(author)) // If the author is a bot mod
             {
-                if (splitContent.Length == 1 && destUser==null) // If there wasn't a user specified and there was only one argument, teleport everyone in voice
+                if (splitContent.Length == 1 && destUser == null) // If there wasn't a user specified and there was only one argument, teleport everyone in voice
                     foreach (IGuildUser user in candidates.Where(a => !string.IsNullOrEmpty(a.VoiceSessionId)))
                         teleport.Add(user);
 
@@ -183,7 +183,7 @@ namespace discordBot
             int die2 = Program.Instance.rand.Next(1, 6);
 
             await ReplyAsync($"{Context.User.Username} rolled a {die1} and a {die2}.");
-            if (die1==die2)
+            if (die1 == die2)
             {
                 BotUsers.IgnoredUsers.Add(Context.User.Id);
                 await ReplyAsync($"Hey {Context.User.Mention} you will be muted for 5 minutes, " +
