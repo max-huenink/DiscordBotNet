@@ -190,7 +190,6 @@ namespace discordBot
                     $"and your commands ignored.");
 
                 IGuildUser guser = Context.Message.Author as IGuildUser;
-                await ReplyAsync($"{Context.User.Username} 5 minute mute.");
                 if (guser.VoiceChannel == null)
                 {
                     if (Program.Instance.toMuteID.TryGetValue(guser.GuildId, out List<ulong> muteIDs))
