@@ -165,7 +165,7 @@ namespace discordBot
 
         public async Task SetVars()
         {
-            botLogChannel = client.GetChannel(538787160674009088) as IMessageChannel;
+            botLogChannel = client.GetChannel(543571980985565194) as IMessageChannel;
             await Task.Delay(1);
         }
 

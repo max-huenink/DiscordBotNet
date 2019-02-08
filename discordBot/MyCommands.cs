@@ -47,6 +47,8 @@ namespace discordBot
                 return;
             string[] splitContent = input.Split(new char[] { ' ' });
 
+//TODO Let user input 15m for minutes, 12h for hours, 4d for days, 51 for seconds
+
             int seconds = 0;
             splitContent.FirstOrDefault(word => int.TryParse(word, out seconds));
 
