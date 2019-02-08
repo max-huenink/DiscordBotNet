@@ -17,12 +17,13 @@ namespace discordBot
         private readonly DiscordSocketClient client;
         private readonly CommandService commands;
         private readonly IServiceProvider services;
-        public static Random rand;
+        public Random rand;
         private readonly string tokenPath;
         private readonly string token;
-        public static readonly Stopwatch sw = new Stopwatch();
+        public readonly Stopwatch sw = new Stopwatch();
+        
         // A string that specifies how long the bot has been running based on when it connected
-        public static string swElapsed
+        public string swElapsed
         {
             get
             {
@@ -33,13 +34,20 @@ namespace discordBot
             }
         }
 
+        public Dictionary<ulong, List<ulong>> toMuteID = new Dictionary<ulong, List<ulong>>();
+        public Dictionary<ulong, List<ulong>> toUnmuteID = new Dictionary<ulong, List<ulong>>();
+
+        public static Program Instance;
+
         readonly Task syncUptime;
         public IMessageChannel botLogChannel;
 
-        static void Main(string[] args) => new Program().Start(/*args*/).GetAwaiter().GetResult();
+        static void Main(string[] args) => new Program().Start().GetAwaiter().GetResult();
 
         public Program()
         {
+            if (Instance == null)
+                Instance = this;
             // Sets things needed for Program()
             rand = new Random();
             client = new DiscordSocketClient(new DiscordSocketConfig
@@ -79,11 +87,31 @@ namespace discordBot
             });
         }
 
-        public async Task Start(/*string[] args*/)
+        public async Task Start()
         {
             // Adds the logger
             client.Log += Logger;
-
+            client.Ready += async () =>
+            {
+                foreach (var guild in client.Guilds)
+                {
+                    toMuteID.TryAdd(guild.Id, new List<ulong>());
+                    toUnmuteID.TryAdd(guild.Id, new List<ulong>());
+                }
+                await Task.Delay(1);
+            };
+            client.JoinedGuild += async (guild) =>
+             {
+                 toMuteID.Add(guild.Id, new List<ulong>());
+                 toUnmuteID.Add(guild.Id, new List<ulong>());
+                 await Task.Delay(1);
+             };
+            client.LeftGuild += async (guild) =>
+              {
+                  toUnmuteID.Remove(guild.Id);
+                  toMuteID.Remove(guild.Id);
+                  await Task.Delay(1);
+              };
             await InstallCommands();
 
             // Tries to login, if it fails the token is probably incorrect (or discord is down)
@@ -97,11 +125,11 @@ namespace discordBot
                 Console.WriteLine("That token doesn't work, or Discord may be down, please try again.");
                 File.Delete(tokenPath);
                 Console.ReadLine();
-                new Program().Start(/*args*/).GetAwaiter().GetResult();
+                Environment.Exit(1);
             }
 
             await client.StartAsync();
-            
+
             await Task.Delay(-1);
         }
 
@@ -129,7 +157,8 @@ namespace discordBot
 
             MyScheduler.NewTask(new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 6, 0, 0).
                 AddDays(7 - (int)DateTime.Now.DayOfWeek), TimeSpan.FromDays(7),
-            async () => {
+            async () =>
+            {
                 await RoleLottery();
             }, $"lottery{GetHashCode()}");
         }
@@ -140,21 +169,49 @@ namespace discordBot
             await Task.Delay(1);
         }
 
-        public async Task UserJoin(SocketGuildUser user)
-        {
+        public async Task UserJoin(SocketGuildUser user) =>
             await botLogChannel.SendMessageAsync($"`{user.Username}` joined `{user.Guild}`");
-        }
 
-        public async Task UserLeft(SocketGuildUser user)
-        {
+        public async Task UserLeft(SocketGuildUser user) =>
             await botLogChannel.SendMessageAsync($"`{user.Username}` left `{user.Guild}`");
-        }
 
         public async Task MovedMember(SocketUser user, SocketVoiceState state1, SocketVoiceState state2)
         {
-            await botLogChannel.SendMessageAsync($"{user.Username} switched from " +
+            IGuildUser guser = user as IGuildUser;
+            if (toMuteID.TryGetValue(guser.GuildId, out List<ulong> muteIDs))
+                if (muteIDs.Contains(user.Id))
+                {
+                    await guser.ModifyAsync(properties => properties.Mute = true);
+                    muteIDs.Remove(user.Id);
+                }
+            if (toUnmuteID.TryGetValue(guser.GuildId, out List<ulong> unmuteIDs))
+                if(unmuteIDs.Contains(user.Id))
+                {
+                    await guser.ModifyAsync(properties => properties.Mute = false);
+                    unmuteIDs.Remove(user.Id);
+                }
+
+            string preText = $"`{user.Username}` ";
+            string message = "";
+
+            // If state 1 is null/empty
+            if (state1.VoiceChannel == null)
+                message = $"joined `{state2.VoiceChannel.Name}` in `{state2.VoiceChannel.Guild}`";
+
+            // If state 2 is null/empty
+            else if (state2.VoiceChannel == null)
+                message = $"left `{state1.VoiceChannel.Name}` in `{state1.VoiceChannel.Guild}`";
+
+            // If state 1 and state 2 are different
+            else if (state1.ToString() != state2.ToString())
+            {
+                message = $"switched from " +
                 $"`{state1.VoiceChannel.Name}` to `{state2.VoiceChannel.Name}` " +
-                $"in `{state2.VoiceChannel.Guild.Name}`");
+                $"in `{state2.VoiceChannel.Guild.Name}`";
+            }
+
+            if (!string.IsNullOrEmpty(message))
+                await botLogChannel.SendMessageAsync(message);
         }
 
         public async Task HandleCommand(SocketMessage messageParam)

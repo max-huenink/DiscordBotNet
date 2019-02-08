@@ -167,7 +167,7 @@ namespace discordBot
         [Command("uptime")]
         public async Task Uptime()
         {
-            await ReplyAsync($"I have been running for {Program.swElapsed}.");
+            await ReplyAsync($"I have been running for {Program.Instance.swElapsed}.");
         }
 
         [Command("sl")]
@@ -179,21 +179,39 @@ namespace discordBot
         [Command("roll")]
         public async Task Roll()
         {
-            int die1 = Program.rand.Next(1, 6);
-            int die2 = Program.rand.Next(1, 6);
+            int die1 = Program.Instance.rand.Next(1, 6);
+            int die2 = Program.Instance.rand.Next(1, 6);
 
             await ReplyAsync($"{Context.User.Username} rolled a {die1} and a {die2}.");
-
-            if (die1 == 1 && die2 == 1)
+            if (die1==die2)
             {
                 BotUsers.IgnoredUsers.Add(Context.User.Id);
-                await ReplyAsync($"{Context.User.Username}'s commands will be ignored for 5 minutes.");
+                await ReplyAsync($"Hey {Context.User.Mention} you will be muted for 5 minutes, " +
+                    $"and your commands ignored.");
 
+                IGuildUser guser = Context.Message.Author as IGuildUser;
+                await ReplyAsync($"{Context.User.Username} 5 minute mute.");
+                if (guser.VoiceChannel == null)
+                {
+                    if (Program.Instance.toMuteID.TryGetValue(guser.GuildId, out List<ulong> muteIDs))
+                        muteIDs.Add(guser.Id);
+                }
+                else
+                    await guser.ModifyAsync(properties => properties.Mute = true);
                 MyScheduler.RunOnce(DateTime.Now.AddMinutes(5),
                     async () =>
                     {
+                        if (guser.VoiceChannel == null)
+                        {
+                            if (Program.Instance.toUnmuteID.TryGetValue(guser.GuildId, out List<ulong> unmuteIDs))
+                                unmuteIDs.Add(guser.Id);
+                        }
+                        else
+                            await guser.ModifyAsync(properties => properties.Mute = false);
+
                         BotUsers.IgnoredUsers.Remove(Context.User.Id);
-                        await ReplyAsync($"It's been five minutes {Context.User.Username}.");
+                        await ReplyAsync($"It's been five minutes {Context.User.Mention}.\n" +
+                            $"You are now unmuted and I will listen to your commands.");
                     });
             }
         }
@@ -204,7 +222,7 @@ namespace discordBot
             await ReplyAsync($"Here is a list of available commands:\n" +
                 $"m!remind `seconds` `message`\n\tReminds you about `message` specified `seconds` after sending command\n" +
                 $"m!tp\n\tMoves the user to the specified user or voice channel, specify a voice channel by its ID\n" +
-                $"m!roll\n\tRolls two dice, if you roll snake eyes your commands are ignored for 5 minutes" +
+                $"m!roll\n\tRolls two dice, if you roll snake eyes your commands are ignored and you are server muted for 5 minutes" +
                 $"m!uptime\n\tReports how long the bot has been running\n" +
                 $"m!help\n\tShows this help dialog.");
         }
