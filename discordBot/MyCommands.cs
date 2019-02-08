@@ -202,7 +202,10 @@ namespace discordBot
                     {
                         if (guser.VoiceChannel == null)
                         {
-                            if (Program.Instance.toUnmuteID.TryGetValue(guser.GuildId, out List<ulong> unmuteIDs))
+                            // If they haven't been muted yet, remove them from the 'to mute' list and don't add to 'to unmute' list
+                            if (Program.Instance.toMuteID.TryGetValue(guser.GuildId, out List<ulong> muteIDs))
+                                muteIDs.Remove(guser.Id);
+                            else if (Program.Instance.toUnmuteID.TryGetValue(guser.GuildId, out List<ulong> unmuteIDs))
                                 unmuteIDs.Add(guser.Id);
                         }
                         else
