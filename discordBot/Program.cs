@@ -1,14 +1,14 @@
-﻿using System;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using System.Linq;
-using Discord;
-using Discord.WebSocket;
+﻿using Discord;
 using Discord.Commands;
+using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
-using System.Reflection;
-using System.IO;
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Threading.Tasks;
 
 namespace discordBot
 {
@@ -21,7 +21,7 @@ namespace discordBot
         private readonly string tokenPath;
         private readonly string token;
         public readonly Stopwatch sw = new Stopwatch();
-        
+
         // A string that specifies how long the bot has been running based on when it connected
         public string swElapsed
         {
@@ -34,13 +34,18 @@ namespace discordBot
             }
         }
 
-        public Dictionary<ulong, List<ulong>> toMuteID = new Dictionary<ulong, List<ulong>>();
-        public Dictionary<ulong, List<ulong>> toUnmuteID = new Dictionary<ulong, List<ulong>>();
-
-        public static Program Instance;
-
         readonly Task syncUptime;
         public IMessageChannel botLogChannel;
+        public IMessageChannel spiritBearLogChannel;
+
+        public Dictionary<ulong, List<ulong>> toMuteID = new Dictionary<ulong, List<ulong>>();
+        public Dictionary<ulong, List<ulong>> toUnmuteID = new Dictionary<ulong, List<ulong>>();
+        private ulong spiritBearGuildID
+        {
+            get => (spiritBearLogChannel as IGuildChannel).GuildId;
+        }
+
+        public static Program Instance;
 
         static void Main(string[] args) => new Program().Start().GetAwaiter().GetResult();
 
@@ -98,6 +103,7 @@ namespace discordBot
                     toMuteID.TryAdd(guild.Id, new List<ulong>());
                     toUnmuteID.TryAdd(guild.Id, new List<ulong>());
                 }
+                SetVars();
                 await Task.Delay(1);
             };
             client.JoinedGuild += async (guild) =>
@@ -142,7 +148,6 @@ namespace discordBot
             client.UserJoined += UserJoin;
             client.UserLeft += UserLeft;
             client.MessageUpdated += HandleUpdate;
-            client.Ready += SetVars;
 
             client.Connected += async () =>
             {
@@ -163,9 +168,10 @@ namespace discordBot
             }, $"lottery{GetHashCode()}");
         }
 
-        public async Task SetVars()
+        public async void SetVars()
         {
-            botLogChannel = client.GetChannel(543571980985565194) as IMessageChannel;
+            spiritBearLogChannel = client.GetChannel(543571980985565194) as IMessageChannel;
+            botLogChannel = client.GetChannel(543875988094844958) as IMessageChannel;
             await Task.Delay(1);
         }
 
@@ -185,7 +191,7 @@ namespace discordBot
                     muteIDs.Remove(user.Id);
                 }
             if (toUnmuteID.TryGetValue(guser.GuildId, out List<ulong> unmuteIDs))
-                if(unmuteIDs.Contains(user.Id))
+                if (unmuteIDs.Contains(user.Id))
                 {
                     await guser.ModifyAsync(properties => properties.Mute = false);
                     unmuteIDs.Remove(user.Id);
@@ -196,22 +202,27 @@ namespace discordBot
 
             // If state 1 is null/empty
             if (state1.VoiceChannel == null)
-                message = $"joined `{state2.VoiceChannel.Name}` in `{state2.VoiceChannel.Guild}`";
+                message = $"joined `{state2.VoiceChannel.Name}`";
 
             // If state 2 is null/empty
             else if (state2.VoiceChannel == null)
-                message = $"left `{state1.VoiceChannel.Name}` in `{state1.VoiceChannel.Guild}`";
+                message = $"left `{state1.VoiceChannel.Name}`";
 
             // If state 1 and state 2 are different
             else if (state1.ToString() != state2.ToString())
             {
                 message = $"switched from " +
-                $"`{state1.VoiceChannel.Name}` to `{state2.VoiceChannel.Name}` " +
-                $"in `{state2.VoiceChannel.Guild.Name}`";
+                $"`{state1.VoiceChannel.Name}` to `{state2.VoiceChannel.Name}`";
             }
-
             if (!string.IsNullOrEmpty(message))
-                await botLogChannel.SendMessageAsync($"{preText} {message}");
+            {
+                if (guser.GuildId == (spiritBearLogChannel as IGuildChannel).GuildId)
+                {
+                    await spiritBearLogChannel.SendMessageAsync($"{preText} {message}.");
+                }
+                message += $" in `{guser.Guild.Name}`";
+                await botLogChannel.SendMessageAsync($"{preText} {message}.");
+            }
         }
 
         public async Task HandleCommand(SocketMessage messageParam)
@@ -258,8 +269,8 @@ namespace discordBot
 
         public async Task RoleLottery()
         {
-            IGuild guild = client.GetGuild(259533308512174081) as IGuild; // Spirit Bear Guild
-            IGuildChannel announce = await guild.GetChannelAsync(335460607279235072); // Announcement channel
+            IGuild guild = client.GetGuild(spiritBearGuildID) as IGuild; // Spirit Bear Guild
+            ITextChannel announce = await guild.GetSystemChannelAsync(); // Announcement channel
             IVoiceChannel voice = await guild.GetVoiceChannelAsync(434092857415041024); // The winner's voice channel
             IRole everyone = guild.EveryoneRole; // The everyone role
             IRole participantRole = guild.GetRole(411281455331672064); // The lottery role

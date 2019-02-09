@@ -47,27 +47,73 @@ namespace discordBot
                 return;
             string[] splitContent = input.Split(new char[] { ' ' });
 
-//TODO Let user input 15m for minutes, 12h for hours, 4d for days, 51 for seconds
-
             int seconds = 0;
-            splitContent.FirstOrDefault(word => int.TryParse(word, out seconds));
 
-            if (608400 <= seconds || seconds <= 0) // Exit if the reminder time is out of bounds
-                return;
+            char modifier = splitContent[0].FirstOrDefault(character => char.IsLetter(character));
+            if (!int.TryParse(string.Join("", splitContent[0].Where(character => char.IsDigit(character))), out seconds))
+            {
+                seconds = 3600;
+                modifier = 's';
+            }
+
+            switch (modifier)
+            {
+                case 'w': // week
+                    seconds *= 604800;
+                    break;
+                case 'd': // day
+                    seconds *= 86400;
+                    break;
+                case 'h': // hour
+                    seconds *= 3600;
+                    break;
+                case 'm': // minute
+                    seconds *= 60;
+                    break;
+                // seconds and default keep seconds as seconds
+            }
+
+            if (seconds <= 0) // If seconds are negative, set default to one hour
+                seconds = 3600;
+
+            int minutes = 0;
+            int hours = 0;
+            int days = 0;
+
+            if (seconds >= 60)
+            {
+                minutes = seconds / 60;
+                seconds %= 60;
+            }
+            if (minutes >= 60)
+            {
+                hours = minutes / 60;
+                minutes %= 60;
+            }
+            if (hours >= 24)
+            {
+                days = hours / 24;
+                hours %= 24;
+            }
 
             string reminder = "nothing";
             if (splitContent.Length > 1)
                 reminder = string.Join(' ', splitContent.AsSpan(1).ToArray());
 
-            string message = $"Hey! Listen! {Context.Message.Author.Mention}. You asked me to remind you about \"{reminder}\". Here's your reminder!";
+            string message = $"Hey! Listen! {Context.Message.Author.Mention}." +
+                $"You asked me to remind you about \"{reminder}\", here's your reminder!";
 
-            MyScheduler.RunOnce(DateTime.Now.AddSeconds(seconds),
+            DateTime remindTime = DateTime.Now.AddDays(days).
+                AddHours(hours).AddMinutes(minutes).AddSeconds(seconds);
+
+            MyScheduler.RunOnce(remindTime,
                 async () =>
                 {
                     await ReplyAsync(message);
                 });
 
-            await ReplyAsync($"Okay, I will remind you about \"{reminder}\" in {seconds} seconds");
+            await ReplyAsync($"Okay, I will remind you about \"{reminder}\"" +
+                $"in {days} days, {hours} hours, {minutes} minutes, and {seconds} seconds\nTotal: {seconds}");
         }
 
         [Command("tp")]
@@ -199,7 +245,7 @@ namespace discordBot
                 }
                 else
                     await guser.ModifyAsync(properties => properties.Mute = true);
-                MyScheduler.RunOnce(DateTime.Now.AddMinutes(5),
+                MyScheduler.RunOnce(DateTime.Now.AddSeconds(30),
                     async () =>
                     {
                         if (guser.VoiceChannel == null)
@@ -224,9 +270,11 @@ namespace discordBot
         public async Task Help()
         {
             await ReplyAsync($"Here is a list of available commands:\n" +
-                $"m!remind `seconds` `message`\n\tReminds you about `message` specified `seconds` after sending command\n" +
+                $"m!remind `integer``{{w,d,h,m,s}}` `message`\n\tReminds you about `message` after specified length of time.\n" +
+                $"\tFor example: `m!remind 11h Hello world` will send `Hello world` after 11 hours.\n" +
                 $"m!tp\n\tMoves the user to the specified user or voice channel, specify a voice channel by its ID\n" +
-                $"m!roll\n\tRolls two dice, if you roll snake eyes your commands are ignored and you are server muted for 5 minutes" +
+                $"\tFor example: `m!tp @user1 @user2` will move `user1` to `user2`'s voice channel.\n" +
+                $"m!roll\n\tRolls two dice, if you roll doubles your commands are ignored and you are server muted for 5 minutes" +
                 $"m!uptime\n\tReports how long the bot has been running\n" +
                 $"m!help\n\tShows this help dialog.");
         }
