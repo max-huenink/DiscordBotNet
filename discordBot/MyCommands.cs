@@ -31,7 +31,7 @@ namespace discordBot
     {
         public override Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services) =>
             Task.Run(() =>
-                context.User == (context.Client as IUser) ?
+                context.User.Id == context.Client.CurrentUser.Id ?
                 PreconditionResult.FromError("") :
                 PreconditionResult.FromSuccess());
     }
