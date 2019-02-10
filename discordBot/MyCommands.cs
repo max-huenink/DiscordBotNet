@@ -234,7 +234,7 @@ namespace discordBot
             if (die1 == die2)
             {
                 BotUsers.IgnoredUsers.Add(Context.User.Id);
-                await ReplyAsync($"Hey {Context.User.Mention} you will be muted for 5 minutes, " +
+                await ReplyAsync($"Hey {Context.User.Mention} you will be muted for 30 seconds, " +
                     $"and your commands ignored.");
 
                 IGuildUser guser = Context.Message.Author as IGuildUser;
