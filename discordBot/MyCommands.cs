@@ -95,7 +95,7 @@ namespace discordBot
                 hours %= 24;
             }
 
-            string message = $"Hey! Listen! {Context.Message.Author.Mention}." +
+            string message = $"Hey! Listen! {Context.Message.Author.Mention}. " +
                 $"You asked me to remind you about \"{reminder}\", here's your reminder!";
 
             DateTime remindTime = DateTime.Now.AddDays(days).
@@ -107,8 +107,8 @@ namespace discordBot
                     await ReplyAsync(message);
                 });
 
-            await ReplyAsync($"Okay, I will remind you about \"{reminder}\"" +
-                $"in {days} days, {hours} hours, {minutes} minutes, and {seconds} seconds\nTotal: {seconds}");
+            await ReplyAsync($"Okay, I will remind you about \"{reminder}\" " +
+                $"in {days} days, {hours} hours, {minutes} minutes, and {seconds} seconds.");
         }
 
         [Command("tp")]
