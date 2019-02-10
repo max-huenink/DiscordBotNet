@@ -283,6 +283,8 @@ namespace discordBot
                     $"\tFor example: `m!tp @user1 @user2` will move `user1` to `user2`'s voice channel.\n" +
                 $"m!roll\n" +
                     $"\tRolls two dice, if you roll doubles your commands are ignored and you are server muted for 5 minutes\n" +
+                $"m!echo `message`\n" +
+                    $"\tEchos your message" +
                 $"m!uptime\n" +
                     $"\tReports how long the bot has been running\n" +
                 $"m!help\n" +
