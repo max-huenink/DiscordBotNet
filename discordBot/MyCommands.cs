@@ -322,7 +322,7 @@ namespace discordBot
             // Don't exit unless the author of the command is the Bot Owner
             if (Context.Message.Author.Id != BotUsers.Owner)
                 return;
-
+            await ReplyAsync("Exiting...");
             await Context.Client.StopAsync();
             Environment.Exit(0);
         }
