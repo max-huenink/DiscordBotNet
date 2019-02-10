@@ -79,6 +79,12 @@ namespace discordBot
                 case 'm': // minute
                     seconds *= 60;
                     break;
+                case 's':
+                case default(char):
+                    break;
+                default:
+                    seconds = 10;
+                    break;
                 // seconds and default keep seconds as seconds
             }
 
