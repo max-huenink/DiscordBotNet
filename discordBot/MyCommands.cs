@@ -266,6 +266,12 @@ namespace discordBot
             }
         }
 
+        [Command("echo")]
+        public async Task Echo([Remainder]string input)
+        {
+            await ReplyAsync(input);
+        }
+
         [Command("help")]
         public async Task Help()
         {
