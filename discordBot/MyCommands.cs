@@ -231,7 +231,7 @@ namespace discordBot
             int die2 = Program.Instance.rand.Next(1, 6);
 
             await ReplyAsync($"{Context.User.Username} rolled a {die1} and a {die2}.");
-            if (die1 == die2)
+            if (die1 == die2 && !(Context.Channel is IDMChannel))
             {
                 BotUsers.IgnoredUsers.Add(Context.User.Id);
                 await ReplyAsync($"Hey {Context.User.Mention} you will be muted for 30 seconds, " +
@@ -270,13 +270,17 @@ namespace discordBot
         public async Task Help()
         {
             await ReplyAsync($"Here is a list of available commands:\n" +
-                $"m!remind `integer``{{w,d,h,m,s}}` `message`\n\tReminds you about `message` after specified length of time.\n" +
-                $"\tFor example: `m!remind 11h Hello world` will send `Hello world` after 11 hours.\n" +
+                $"m!remind `integer``{{w,d,h,m,s}}` `message`\n" +
+                    $"\tReminds you about `message` after specified length of time.\n" +
+                    $"\tFor example: `m!remind 11h Hello world` will send `Hello world` after 11 hours.\n" +
                 $"m!tp\n\tMoves the user to the specified user or voice channel, specify a voice channel by its ID\n" +
-                $"\tFor example: `m!tp @user1 @user2` will move `user1` to `user2`'s voice channel.\n" +
-                $"m!roll\n\tRolls two dice, if you roll doubles your commands are ignored and you are server muted for 5 minutes" +
-                $"m!uptime\n\tReports how long the bot has been running\n" +
-                $"m!help\n\tShows this help dialog.");
+                    $"\tFor example: `m!tp @user1 @user2` will move `user1` to `user2`'s voice channel.\n" +
+                $"m!roll\n" +
+                    $"\tRolls two dice, if you roll doubles your commands are ignored and you are server muted for 5 minutes\n" +
+                $"m!uptime\n" +
+                    $"\tReports how long the bot has been running\n" +
+                $"m!help\n" +
+                    $"\tShows this help dialog.");
         }
     }
 
