@@ -41,16 +41,15 @@ namespace discordBot
     public class TextCommands : ModuleBase
     {
         [Command("remind")]
-        public async Task Remind([Remainder]string input)
+        public async Task Remind(string time, [Remainder]string reminder = "nothing")
         {
-            if (input == null) // Exit if there wasn't an argument
+            if (string.IsNullOrEmpty(time)) // Exit if there wasn't an argument
                 return;
-            string[] splitContent = input.Split(new char[] { ' ' });
 
             int seconds = 0;
 
-            char modifier = splitContent[0].FirstOrDefault(character => char.IsLetter(character));
-            if (!int.TryParse(string.Join("", splitContent[0].Where(character => char.IsDigit(character))), out seconds))
+            char modifier = time.FirstOrDefault(character => char.IsLetter(character));
+            if (!int.TryParse(string.Join("", time.Where(character => char.IsDigit(character))), out seconds))
             {
                 seconds = 3600;
                 modifier = 's';
@@ -95,10 +94,6 @@ namespace discordBot
                 days = hours / 24;
                 hours %= 24;
             }
-
-            string reminder = "nothing";
-            if (splitContent.Length > 1)
-                reminder = string.Join(' ', splitContent.AsSpan(1).ToArray());
 
             string message = $"Hey! Listen! {Context.Message.Author.Mention}." +
                 $"You asked me to remind you about \"{reminder}\", here's your reminder!";
