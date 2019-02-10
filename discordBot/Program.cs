@@ -38,8 +38,8 @@ namespace discordBot
         public IMessageChannel botLogChannel;
         public IMessageChannel spiritBearLogChannel;
 
-        public Dictionary<ulong, List<ulong>> toMuteID = new Dictionary<ulong, List<ulong>>();
-        public Dictionary<ulong, List<ulong>> toUnmuteID = new Dictionary<ulong, List<ulong>>();
+        // Dictionary of servers holding a dictionary of ulong lists for "mute" and "unmute"
+        public Dictionary<ulong, Dictionary<string, List<ulong>>> servers = new Dictionary<ulong, Dictionary<string, List<ulong>>>();
         private ulong spiritBearGuildID
         {
             get => (spiritBearLogChannel as IGuildChannel).GuildId;
@@ -100,22 +100,27 @@ namespace discordBot
             {
                 foreach (var guild in client.Guilds)
                 {
-                    toMuteID.TryAdd(guild.Id, new List<ulong>());
-                    toUnmuteID.TryAdd(guild.Id, new List<ulong>());
+                    servers.TryAdd(guild.Id, new Dictionary<string, List<ulong>>()
+                    {
+                        { "mute", new List<ulong>() },
+                        { "unmute", new List<ulong>() }
+                    });
                 }
                 SetVars();
                 await Task.Delay(1);
             };
             client.JoinedGuild += async (guild) =>
              {
-                 toMuteID.Add(guild.Id, new List<ulong>());
-                 toUnmuteID.Add(guild.Id, new List<ulong>());
+                 servers.TryAdd(guild.Id, new Dictionary<string, List<ulong>>()
+                    {
+                        { "mute", new List<ulong>() },
+                        { "unmute", new List<ulong>() }
+                    });
                  await Task.Delay(1);
              };
             client.LeftGuild += async (guild) =>
               {
-                  toUnmuteID.Remove(guild.Id);
-                  toMuteID.Remove(guild.Id);
+                  servers.Remove(guild.Id);
                   await Task.Delay(1);
               };
             await InstallCommands();
@@ -125,7 +130,7 @@ namespace discordBot
             {
                 await client.LoginAsync(TokenType.Bot, token);
             }
-            catch (Exception) // Restarts the program if the token is incorrect
+            catch (Exception) // Exits if the token is incorrect
             {
                 Console.Clear();
                 Console.WriteLine("That token doesn't work, or Discord may be down, please try again.");
@@ -184,18 +189,19 @@ namespace discordBot
         public async Task MovedMember(SocketUser user, SocketVoiceState state1, SocketVoiceState state2)
         {
             IGuildUser guser = user as IGuildUser;
-            if (toMuteID.TryGetValue(guser.GuildId, out List<ulong> muteIDs))
-                if (muteIDs.Contains(user.Id))
+            if (servers.TryGetValue(guser.GuildId, out Dictionary<string, List<ulong>> serverUser))
+            {
+                if (serverUser["mute"].Contains(user.Id))
                 {
                     await guser.ModifyAsync(properties => properties.Mute = true);
-                    muteIDs.Remove(user.Id);
+                    serverUser["mute"].Remove(user.Id);
                 }
-            if (toUnmuteID.TryGetValue(guser.GuildId, out List<ulong> unmuteIDs))
-                if (unmuteIDs.Contains(user.Id))
+                if (serverUser["unmute"].Contains(user.Id))
                 {
                     await guser.ModifyAsync(properties => properties.Mute = false);
-                    unmuteIDs.Remove(user.Id);
+                    serverUser["unmute"].Remove(user.Id);
                 }
+            }
 
             string preText = $"`{user.Username}` ";
             string message = "";

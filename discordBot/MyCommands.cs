@@ -27,6 +27,15 @@ namespace discordBot
                 PreconditionResult.FromSuccess());
     }
 
+    public class AmBot : PreconditionAttribute
+    {
+        public override Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services) =>
+            Task.Run(() =>
+                context.User == (context.Client as IUser) ?
+                PreconditionResult.FromError("") :
+                PreconditionResult.FromSuccess());
+    }
+
     public static class BotUsers
     {
         public readonly static ulong Owner = 259532984909168659;
@@ -38,6 +47,7 @@ namespace discordBot
     }
 
     [CheckIgnore()]
+    [AmBot()]
     public class TextCommands : ModuleBase
     {
         [Command("remind")]
@@ -235,8 +245,8 @@ namespace discordBot
                 IGuildUser guser = Context.Message.Author as IGuildUser;
                 if (guser.VoiceChannel == null)
                 {
-                    if (Program.Instance.toMuteID.TryGetValue(guser.GuildId, out List<ulong> muteIDs))
-                        muteIDs.Add(guser.Id);
+                    if (Program.Instance.servers.TryGetValue(guser.GuildId, out Dictionary<string, List<ulong>> serverMembers))
+                        serverMembers["mute"].Add(guser.Id);
                 }
                 else
                     await guser.ModifyAsync(properties => properties.Mute = true);
@@ -246,17 +256,16 @@ namespace discordBot
                         if (guser.VoiceChannel == null)
                         {
                             // If they haven't been muted yet, remove them from the 'to mute' list and don't add to 'to unmute' list
-                            if (Program.Instance.toMuteID.TryGetValue(guser.GuildId, out List<ulong> muteIDs))
-                                muteIDs.Remove(guser.Id);
-                            else if (Program.Instance.toUnmuteID.TryGetValue(guser.GuildId, out List<ulong> unmuteIDs))
-                                unmuteIDs.Add(guser.Id);
+                            if (Program.Instance.servers.TryGetValue(guser.GuildId, out Dictionary<string, List<ulong>> serverMembers))
+                                // If the user wasn't removed from the list then they were already muted, so add to unmute list
+                                if (!serverMembers["mute"].Remove(guser.Id))
+                                    serverMembers["unmute"].Add(guser.Id);
                         }
                         else
                             await guser.ModifyAsync(properties => properties.Mute = false);
 
                         BotUsers.IgnoredUsers.Remove(Context.User.Id);
-                        await ReplyAsync($"It's been five minutes {Context.User.Mention}.\n" +
-                            $"You are now unmuted and I will listen to your commands.");
+                        await ReplyAsync($"Hey {Context.User.Mention}, you are now unmuted and I will listen to your commands.");
                     });
             }
         }
