@@ -152,7 +152,7 @@ namespace discordBot
             client.UserVoiceStateUpdated += MovedMember;
             client.UserJoined += UserJoin;
             client.UserLeft += UserLeft;
-            client.MessageUpdated += HandleUpdate;
+            //client.MessageUpdated += HandleUpdate;
 
             client.Connected += async () =>
             {
@@ -250,7 +250,7 @@ namespace discordBot
             // Update the uptime
             await UpdateUptime();
         }
-
+        
         public async Task HandleUpdate(Cacheable<IMessage, ulong> cacheMsg, SocketMessage message, ISocketMessageChannel channel)
         {
             await HandleCommand(message);

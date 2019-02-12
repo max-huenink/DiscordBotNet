@@ -89,7 +89,7 @@ namespace discordBot
             }
 
             if (seconds <= 0) // If seconds are negative, set default to one hour
-                seconds = 3600;
+                seconds = 60;
 
             int minutes = 0;
             int hours = 0;
@@ -340,6 +340,7 @@ namespace discordBot
             if (Context.Message.Author.Id != BotUsers.Owner)
                 return;
             await Program.Instance.RoleLottery();
+            await ReplyAsync("Rerolled lottery.");
         }
 
         [Command("exit")]
