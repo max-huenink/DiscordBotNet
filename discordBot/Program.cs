@@ -134,7 +134,12 @@ namespace discordBot
             {
                 Console.Clear();
                 Console.WriteLine("That token doesn't work, or Discord may be down, please try again.");
-                File.Delete(tokenPath);
+                Console.WriteLine("Do you think your token is correct? [y]/n");
+                string correct = Console.ReadLine();
+                if (!string.IsNullOrEmpty(correct) && correct.ToLower().First<char>() == 'n')
+                {
+                    File.Delete(tokenPath);
+                }
                 Console.ReadLine();
                 Environment.Exit(1);
             }
