@@ -185,11 +185,19 @@ namespace discordBot
             await Task.Delay(1);
         }
 
-        public async Task UserJoin(SocketGuildUser user) =>
+        public async Task UserJoin(SocketGuildUser user)
+        {
             await botLogChannel.SendMessageAsync($"`{user.Username}` joined `{user.Guild}`");
+            if (user.Guild.Id == spiritBearGuildID)
+                await spiritBearLogChannel.SendMessageAsync($"`{user.Username}` joined the server");
+        }
 
-        public async Task UserLeft(SocketGuildUser user) =>
+        public async Task UserLeft(SocketGuildUser user)
+        {
             await botLogChannel.SendMessageAsync($"`{user.Username}` left `{user.Guild}`");
+            if (user.Guild.Id == spiritBearGuildID)
+                await spiritBearLogChannel.SendMessageAsync($"`{user.Username}` left the server");
+        }
 
         public async Task MovedMember(SocketUser user, SocketVoiceState state1, SocketVoiceState state2)
         {
