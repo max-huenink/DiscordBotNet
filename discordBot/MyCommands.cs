@@ -289,15 +289,15 @@ namespace discordBot
                 $"m!remind `integer``{{w,d,h,m,s}}` `message`\n" +
                     $"\tReminds you about `message` after specified length of time.\n" +
                     $"\tFor example: `m!remind 11h Hello world` will send `Hello world` after 11 hours.\n" +
-                $"m!tp\n\tMoves the user to the specified user or voice channel, specify a voice channel by its ID\n" +
+                $"\nm!tp\n\tMoves the user to the specified user or voice channel, specify a voice channel by its ID\n" +
                     $"\tFor example: `m!tp @user1 @user2` will move `user1` to `user2`'s voice channel.\n" +
-                $"m!roll\n" +
+                $"\nm!roll\n" +
                     $"\tRolls two dice, if you roll doubles your commands are ignored and you are server muted for 5 minutes\n" +
-                $"m!echo `message`\n" +
-                    $"\tEchos your message" +
-                $"m!uptime\n" +
+                $"\nm!echo `message`\n" +
+                    $"\tEchos your message\n" +
+                $"\nm!uptime\n" +
                     $"\tReports how long the bot has been running\n" +
-                $"m!help\n" +
+                $"\nm!help\n" +
                     $"\tShows this help dialog.");
         }
     }
@@ -332,6 +332,14 @@ namespace discordBot
         public async Task Echo([Remainder]string input)
         {
             await ReplyAsync(input);
+        }
+
+        [Command("reroll_lottery")]
+        public async Task ReRollLotto()
+        {
+            if (Context.Message.Author.Id != BotUsers.Owner)
+                return;
+            await Program.Instance.RoleLottery();
         }
 
         [Command("exit")]
