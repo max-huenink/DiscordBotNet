@@ -1,11 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Linq;
-using Discord;
+﻿using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
-using Discord.API;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace discordBot
@@ -16,6 +14,14 @@ namespace discordBot
             Task.Run(() => BotUsers.IsBotMod(context.User) ?
                 PreconditionResult.FromSuccess() :
                 PreconditionResult.FromError($"{context.User.Username} is not a bot mod"));
+    }
+
+    public class RequireBotOwner : PreconditionAttribute
+    {
+        public override Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services) =>
+            Task.Run(() => BotUsers.Owner == context.User.Id ?
+                PreconditionResult.FromSuccess() :
+                PreconditionResult.FromError($"{context.User.Username} is not the owner"));
     }
 
     public class CheckIgnore : PreconditionAttribute
@@ -85,7 +91,7 @@ namespace discordBot
                 default:
                     seconds = 10;
                     break;
-                // seconds and default keep seconds as seconds
+                    // seconds and default keep seconds as seconds
             }
 
             if (seconds <= 0) // If seconds are negative, set default to one hour
@@ -320,38 +326,76 @@ namespace discordBot
         [Command("roles")]
         public async Task GetRoles()
         {
-            IGuild g = Context.Guild;
-            if (g == null) { return; }
+            IGuild guild = Context.Guild;
+            if (guild == null) { return; }
             await ReplyAsync(
                 "Roles:\n" +
-                g.Roles.OrderByDescending(p => p.Position).
-                    Aggregate(string.Empty, (a, b) => (a += $"{b.Position} {b.Name}: {b.Id}\n")));
+                guild.Roles.OrderByDescending(p => p.Position).
+                    Aggregate(string.Empty, (text, role) => text += $"{role.Position} {role.Name}: {role.Id}\n"));
         }
 
-        [Command("echo")]
-        public async Task Echo([Remainder]string input)
+        [Command("servers")]
+        public async Task GetServers()
         {
-            await ReplyAsync(input);
+            await ReplyAsync(
+                "Servers:\n" +
+                (Context.Client as DiscordSocketClient).Guilds.Aggregate(string.Empty, (text, guild) => text += $"{guild}\n"));
         }
 
+        [Command("help")]
+        public async Task Help()
+        {
+            await ReplyAsync($"Available debug commands:\n" +
+                $"m!debug roles\n" +
+                    $"\tLists all roles with id in the hierarchy order\n" +
+                $"\nm!debug servers\n" +
+                    $"\tLists all servers this part is in\n" +
+                $"\nm!debug help\n" +
+                    $"\tDisplays this help" +
+                $"\nm!debug owner\n" +
+                    $"\tAre you the owner?");
+        }
+    }
+
+    [Group("debug")]
+    [RequireBotOwner()]
+    public class OwnerCommands : ModuleBase
+    {
         [Command("reroll_lottery")]
         public async Task ReRollLotto()
         {
-            if (Context.Message.Author.Id != BotUsers.Owner)
-                return;
             await Program.Instance.RoleLottery();
             await ReplyAsync("Rerolled lottery.");
+        }
+
+        [Command("unmute")]
+        public async Task Unmute()
+        {
+            BotUsers.IgnoredUsers.Clear();
+            await ReplyAsync("All ignored users are now un-ignored.");
         }
 
         [Command("exit")]
         public async Task Exit()
         {
-            // Don't exit unless the author of the command is the Bot Owner
-            if (Context.Message.Author.Id != BotUsers.Owner)
-                return;
             await ReplyAsync("Exiting...");
             await Context.Client.StopAsync();
             Environment.Exit(0);
         }
+
+        [Command("owner")]
+        public async Task OwnerHelp()
+        {
+            await ReplyAsync($"Owner commands:\n" +
+                $"m!debug reroll_lottery\n" +
+                    $"\tRerolls the spirit bear lottery\n" +
+                $"\nm!debug unmute\n" +
+                    $"\tRemoves all users from the ignore list\n" +
+                $"\nm!debug exit\n" +
+                    $"\tExits the bot safely\n" +
+                $"\nm!debug help\n" +
+                    $"\tDisplays this help text");
+        }
     }
+
 }
