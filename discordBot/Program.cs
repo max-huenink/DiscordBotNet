@@ -30,20 +30,18 @@ namespace discordBot
                 string days = ((sw.Elapsed.Days < 10) ? "0" : "") + sw.Elapsed.Days;
                 string hours = ((sw.Elapsed.Hours < 10) ? "0" : "") + sw.Elapsed.Hours;
                 string minutes = ((sw.Elapsed.Minutes < 10) ? "0" : "") + sw.Elapsed.Minutes;
-                return $"{days}:{hours}:{minutes}";
+                string seconds = ((sw.Elapsed.Seconds < 10) ? "0" : "") + sw.Elapsed.Seconds;
+                return $"{days}:{hours}:{minutes}:{seconds}";
             }
         }
 
         readonly Task syncUptime;
         public IMessageChannel botLogChannel;
-        public IMessageChannel spiritBearLogChannel;
+        //public IMessageChannel spiritBearLogChannel;
 
         // Dictionary of servers holding a dictionary of ulong lists for "mute" and "unmute"
         public Dictionary<ulong, Dictionary<string, List<ulong>>> servers = new Dictionary<ulong, Dictionary<string, List<ulong>>>();
-        private ulong spiritBearGuildID
-        {
-            get => (spiritBearLogChannel as IGuildChannel).GuildId;
-        }
+        private ulong spiritBearGuildID = 259533308512174081;
 
         public static Program Instance;
 
@@ -87,7 +85,7 @@ namespace discordBot
                 while (true)
                 {
                     await UpdateUptime();
-                    await Task.Delay(60000);
+                    await Task.Delay(75000);
                 }
             });
         }
@@ -96,6 +94,7 @@ namespace discordBot
         {
             // Adds the logger
             client.Log += Logger;
+
             client.Ready += async () =>
             {
                 foreach (var guild in client.Guilds)
@@ -123,6 +122,7 @@ namespace discordBot
                   servers.Remove(guild.Id);
                   await Task.Delay(1);
               };
+
             await InstallCommands();
 
             // Tries to login, if it fails the token is probably incorrect (or discord is down)
@@ -134,9 +134,9 @@ namespace discordBot
             {
                 Console.Clear();
                 Console.WriteLine("That token doesn't work, or Discord may be down, please try again.");
-                Console.WriteLine("Do you think your token is correct? [y]/n");
+                Console.WriteLine("Do you want to reenter your token? y/[n]");
                 string correct = Console.ReadLine();
-                if (!string.IsNullOrEmpty(correct) && correct.ToLower().First<char>() == 'n')
+                if (!string.IsNullOrEmpty(correct) && correct.ToLower().First<char>() == 'y')
                 {
                     File.Delete(tokenPath);
                 }
@@ -154,9 +154,9 @@ namespace discordBot
             // Hook the MessageReceived Event into our Command Handler
             client.MessageReceived += HandleCommand;
 
-            client.UserVoiceStateUpdated += MovedMember;
-            client.UserJoined += UserJoin;
-            client.UserLeft += UserLeft;
+            client.UserVoiceStateUpdated += VoiceStateChange;
+            client.UserJoined += UserJoinGuild;
+            client.UserLeft += UserLeftGuild;
             //client.MessageUpdated += HandleUpdate;
 
             client.Connected += async () =>
@@ -180,26 +180,30 @@ namespace discordBot
 
         public async void SetVars()
         {
-            spiritBearLogChannel = client.GetChannel(543571980985565194) as IMessageChannel;
+            //spiritBearLogChannel = client.GetChannel(543571980985565194) as IMessageChannel;
             botLogChannel = client.GetChannel(543875988094844958) as IMessageChannel;
             await Task.Delay(1);
         }
 
-        public async Task UserJoin(SocketGuildUser user)
+        public async Task UserJoinGuild(SocketGuildUser user)
         {
             await botLogChannel.SendMessageAsync($"`{user.Username}` joined `{user.Guild}`");
+            /*
             if (user.Guild.Id == spiritBearGuildID)
                 await spiritBearLogChannel.SendMessageAsync($"`{user.Username}` joined the server");
+            */
         }
 
-        public async Task UserLeft(SocketGuildUser user)
+        public async Task UserLeftGuild(SocketGuildUser user)
         {
             await botLogChannel.SendMessageAsync($"`{user.Username}` left `{user.Guild}`");
+            /*
             if (user.Guild.Id == spiritBearGuildID)
                 await spiritBearLogChannel.SendMessageAsync($"`{user.Username}` left the server");
+            */
         }
 
-        public async Task MovedMember(SocketUser user, SocketVoiceState state1, SocketVoiceState state2)
+        public async Task VoiceStateChange(SocketUser user, SocketVoiceState state1, SocketVoiceState state2)
         {
             IGuildUser guser = user as IGuildUser;
             if (servers.TryGetValue(guser.GuildId, out Dictionary<string, List<ulong>> serverUser))
@@ -235,10 +239,12 @@ namespace discordBot
             }
             if (!string.IsNullOrEmpty(message))
             {
-                if (guser.GuildId == (spiritBearLogChannel as IGuildChannel).GuildId)
+                /*
+                if (guser.GuildId == spiritBearGuildID)
                 {
                     await spiritBearLogChannel.SendMessageAsync($"{preText} {message}.");
                 }
+                */
                 message += $" in `{guser.Guild.Name}`";
                 await botLogChannel.SendMessageAsync($"{preText} {message}.");
             }
@@ -296,7 +302,7 @@ namespace discordBot
             IRole winningRole = guild.GetRole(335456437352529921); // The winning role
             // All users in the guild
             var users = await guild.GetUsersAsync();
-
+            
             // All possible participants
             IEnumerable<IGuildUser> participants = users.Where(user => user.RoleIds.Any(roleID => roleID == participantRole.Id));
             // Everyone who currently has the winning role
@@ -316,26 +322,26 @@ namespace discordBot
 
             // Randomly selects the winner
             IGuildUser winner = participants.ElementAt(rand.Next(0, participants.Count()));
-
+            
             // Gives the winner their role
             await winner.AddRoleAsync(winningRole, new RequestOptions { AuditLogReason = $"The new {winningRole.Name} is in town" });
 
             // Edits the winner's voice channel name
-            await voice.ModifyAsync((VoiceChannelProperties p) =>
+            await voice.ModifyAsync((VoiceChannelProperties prop) =>
             {
-                p.Name = $"{winner.Username}\'s Executive Suite";
-                p.Bitrate = 64000;
+                prop.Name = $"{winner.Username}\'s Executive Suite";
+                prop.Bitrate = 64000;
             }, new RequestOptions { AuditLogReason = "Reset and rename" });
 
             // Resets permissions to their 'default' values
             await voice.SyncPermissionsAsync(new RequestOptions { AuditLogReason = "Reset permissions" });
             // Edits everyone role permission overwrites
             await voice.AddPermissionOverwriteAsync(everyone,
-                new OverwritePermissions(connect: PermValue.Deny, moveMembers: PermValue.Deny),
+                new OverwritePermissions(manageChannel: PermValue.Deny, manageRoles: PermValue.Deny, connect: PermValue.Deny, moveMembers: PermValue.Deny),
                 new RequestOptions { AuditLogReason = "Reset permissions" });
             // Edits winner role permission overwrites
             await voice.AddPermissionOverwriteAsync(winningRole,
-                new OverwritePermissions(connect: PermValue.Allow, moveMembers: PermValue.Allow),
+                new OverwritePermissions(connect: PermValue.Allow, moveMembers: PermValue.Allow, manageRoles:PermValue.Allow),
                 new RequestOptions { AuditLogReason = "Reset permssions" });
 
             msg += $"Participants: {string.Join(", ", participants.Select(participant => participant.Username))}\n";

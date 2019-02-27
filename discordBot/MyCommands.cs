@@ -242,10 +242,10 @@ namespace discordBot
         }
 
         [Command("roll")]
-        public async Task Roll()
+        public async Task Roll(int sides = 6)
         {
-            int die1 = Program.Instance.rand.Next(1, 6);
-            int die2 = Program.Instance.rand.Next(1, 6);
+            int die1 = Program.Instance.rand.Next(1, sides);
+            int die2 = Program.Instance.rand.Next(1, sides);
 
             await ReplyAsync($"{Context.User.Username} rolled a {die1} and a {die2}.");
             if (die1 == die2 && !(Context.Channel is IDMChannel))
@@ -297,8 +297,9 @@ namespace discordBot
                     $"\tFor example: `m!remind 11h Hello world` will send `Hello world` after 11 hours.\n" +
                 $"\nm!tp\n\tMoves the user to the specified user or voice channel, specify a voice channel by its ID\n" +
                     $"\tFor example: `m!tp @user1 @user2` will move `user1` to `user2`'s voice channel.\n" +
-                $"\nm!roll\n" +
-                    $"\tRolls two dice, if you roll doubles your commands are ignored and you are server muted for 5 minutes\n" +
+                $"\nm!roll `sides`\n" +
+                    $"\tRolls two dice with `sides` number of sides (default 6)\n" +
+                    $"\tIf you roll doubles your commands are ignored and you are voice muted for 5 minutes\n" +
                 $"\nm!echo `message`\n" +
                     $"\tEchos your message\n" +
                 $"\nm!uptime\n" +
@@ -333,7 +334,35 @@ namespace discordBot
                 guild.Roles.OrderByDescending(p => p.Position).
                     Aggregate(string.Empty, (text, role) => text += $"{role.Position} {role.Name}: {role.Id}\n"));
         }
-
+        
+        [Command("roleperms")]
+        public async Task GetRolePermissions()
+        {
+            await ReplyAsync("Not implemented");
+            /*
+            IGuild guild = Context.Guild;
+            if (guild == null) { return; }
+            IOrderedEnumerable<IRole> ordered = guild.Roles.OrderByDescending(p => p.Position);
+            string message = "Roles & Permissions:";
+            foreach (IRole role in ordered)
+            {
+                message += $"{role.Position} {role.Name}\n" +
+                    $"\tView Audit Log: {role.Permissions.ViewAuditLog}\n" +
+                    $"\tManage Roles: {role.Permissions.ManageRoles}\n" +
+                    $"\tManage Channels: {role.Permissions.ManageChannels}\n" +
+                    $"\tManage Nicknames: {role.Permissions.ManageNicknames}\n" +
+                    $"\tSend TTS: {role.Permissions.SendTTSMessages}\n" +
+                    $"\tManage Messages: {role.Permissions.ManageMessages}\n" +
+                    $"\tMention Everyone: {role.Permissions.MentionEveryone}\n" +
+                    $"\tMute Members: {role.Permissions.MuteMembers}\n" +
+                    $"\tDeafen Members: {role.Permissions.DeafenMembers}\n" +
+                    $"\tPriority Speaker: {role.Permissions.PrioritySpeaker}\n";
+                await ReplyAsync(message);
+                message = "";
+            }
+            */
+        }
+        
         [Command("servers")]
         public async Task GetServers()
         {
@@ -348,6 +377,8 @@ namespace discordBot
             await ReplyAsync($"Available debug commands:\n" +
                 $"m!debug roles\n" +
                     $"\tLists all roles with id in the hierarchy order\n" +
+                $"m!debug roleperms\n" +
+                    $"\tLists all roles and what permissions they have" +
                 $"\nm!debug servers\n" +
                     $"\tLists all servers this part is in\n" +
                 $"\nm!debug help\n" +
@@ -383,7 +414,7 @@ namespace discordBot
             Environment.Exit(0);
         }
 
-        [Command("owner")]
+        [Command("halp")]
         public async Task OwnerHelp()
         {
             await ReplyAsync($"Owner commands:\n" +
