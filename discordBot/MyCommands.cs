@@ -3,6 +3,7 @@ using Discord.Commands;
 using Discord.WebSocket;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -334,7 +335,7 @@ namespace discordBot
                 guild.Roles.OrderByDescending(p => p.Position).
                     Aggregate(string.Empty, (text, role) => text += $"{role.Position} {role.Name}: {role.Id}\n"));
         }
-        
+
         [Command("roleperms")]
         public async Task GetRolePermissions()
         {
@@ -362,7 +363,7 @@ namespace discordBot
             }
             */
         }
-        
+
         [Command("servers")]
         public async Task GetServers()
         {
@@ -388,7 +389,7 @@ namespace discordBot
         }
     }
 
-    [Group("debug")]
+    //[Group("owner")]
     [RequireBotOwner()]
     public class OwnerCommands : ModuleBase
     {
@@ -406,6 +407,83 @@ namespace discordBot
             await ReplyAsync("All ignored users are now un-ignored.");
         }
 
+        [Command("download")]
+        public async Task Download([Remainder]string args = "")
+        {
+            var channelIDs = Context.Message.MentionedChannelIds;
+            var channels = new List<ITextChannel>();
+            if (args.Length > 0 && args.Split(new char[] { ' ' })[0] == "all")
+            {
+                // Assume downloading all channels
+                channels.AddRange(await Context.Guild.GetTextChannelsAsync());
+            }
+            else if (channelIDs.Count == 0)
+            {
+                // No channel was specified, download the contents of the current channel
+                channels.Add((ITextChannel)Context.Channel);
+            }
+            else
+            {
+                // Download contents of all mentioned channels
+                foreach (var channelID in channelIDs)
+                {
+                    channels.Add(await Context.Guild.GetTextChannelAsync(channelID));
+                }
+            }
+            foreach (var channel in channels)
+            {
+                var messages = await channel.GetMessagesAsync(int.MaxValue,
+                    options: new RequestOptions
+                    {
+                        RetryMode = RetryMode.RetryRatelimit,
+                        AuditLogReason = "Because I can",
+                    }).FlattenAsync();
+                IEnumerable<string> text = messages
+                    .OrderBy(t => t.Timestamp)
+                    .Select(i => $"[{i.Timestamp}] " +
+                        $"{i.Author.Username}: " +
+                        $"{i.Content} " +
+                        $"{(i.Attachments.Count > 0 ? i.Attachments.Aggregate("", (e, a) => $"{e}{Environment.NewLine}{a.Url}") : string.Empty)}");
+                string filePath = Path.Combine(new string[]
+                    {
+                        AppDomain.CurrentDomain.BaseDirectory,
+                        "Servers",
+                        Context.Guild.Name,
+                        "Channels",
+                        channel.Name,
+                        $"messageDownload_{DateTime.Now.ToString("yyyyMMdd")}.txt",
+                    });
+                Directory.CreateDirectory(Path.GetDirectoryName(filePath));
+                //File.Create(filePath);
+                await File.WriteAllLinesAsync(filePath, text);
+                await ReplyAsync($"Downloaded history of {channel.Name} to {Path.GetFileName(filePath)}");
+            }
+            await ReplyAsync("Done");
+        }
+
+        [Command("count")]
+        public async Task Count()
+        {
+            var messages = await Context.Channel.GetMessagesAsync(int.MaxValue,
+                    options: new RequestOptions
+                    {
+                        RetryMode = RetryMode.RetryRatelimit,
+                        AuditLogReason = "Because I can",
+                    }).FlattenAsync();
+            int allMessages = messages.Count();
+            var users = await Context.Channel.GetUsersAsync().FlattenAsync();
+            string msg = $"Total messages: {allMessages}\n";
+            foreach (var user in users)
+            {
+                int userMessages = messages.Count(i => i.Author.Id == user.Id);
+                if (userMessages > 300)
+                {
+                    msg += $"{user.Username} has sent {userMessages} / {allMessages} or {100f * ((float)userMessages / (float)allMessages)} % of the messages in this channel.\n";
+                }
+            }
+            await ReplyAsync(msg);
+        }
+
         [Command("exit")]
         public async Task Exit()
         {
@@ -414,17 +492,21 @@ namespace discordBot
             Environment.Exit(0);
         }
 
-        [Command("halp")]
+        [Command("help")]
         public async Task OwnerHelp()
         {
             await ReplyAsync($"Owner commands:\n" +
-                $"m!debug reroll_lottery\n" +
+                $"m!owner reroll_lottery\n" +
                     $"\tRerolls the spirit bear lottery\n" +
-                $"\nm!debug unmute\n" +
+                $"\nm!owner unmute\n" +
                     $"\tRemoves all users from the ignore list\n" +
-                $"\nm!debug exit\n" +
+                $"\nm!owner download [`channel`|all]\n"+
+                    $"\tDownloads all messages in all channels, specified channel(s), or current channel\n" +
+                $"\nm!owner count [`channel`]\n" +
+                    $"\tCounts how many messages have been sent by each user in the current or specified channel"+
+                $"\nm!owner exit\n" +
                     $"\tExits the bot safely\n" +
-                $"\nm!debug help\n" +
+                $"\nm!owner help\n" +
                     $"\tDisplays this help text");
         }
     }
