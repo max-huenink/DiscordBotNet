@@ -233,7 +233,7 @@ namespace discordBot
         [Command("uptime")]
         public async Task Uptime()
         {
-            await ReplyAsync($"I have been running for {Program.Instance.swElapsed}.");
+            await ReplyAsync($"I have been running for {Controller.Instance.swElapsed}.");
         }
 
         [Command("sl")]
@@ -245,8 +245,8 @@ namespace discordBot
         [Command("roll")]
         public async Task Roll(int sides = 6)
         {
-            int die1 = Program.Instance.rand.Next(1, sides);
-            int die2 = Program.Instance.rand.Next(1, sides);
+            int die1 = Controller.Instance.rand.Next(1, sides);
+            int die2 = Controller.Instance.rand.Next(1, sides);
 
             await ReplyAsync($"{Context.User.Username} rolled a {die1} and a {die2}.");
             if (die1 == die2 && !(Context.Channel is IDMChannel))
@@ -258,7 +258,7 @@ namespace discordBot
                 IGuildUser guser = Context.Message.Author as IGuildUser;
                 if (guser.VoiceChannel == null)
                 {
-                    if (Program.Instance.servers.TryGetValue(guser.GuildId, out Dictionary<string, List<ulong>> serverMembers))
+                    if (Controller.Instance.servers.TryGetValue(guser.GuildId, out Dictionary<string, List<ulong>> serverMembers))
                         serverMembers["mute"].Add(guser.Id);
                 }
                 else
@@ -269,7 +269,7 @@ namespace discordBot
                         if (guser.VoiceChannel == null)
                         {
                             // If they haven't been muted yet, remove them from the 'to mute' list and don't add to 'to unmute' list
-                            if (Program.Instance.servers.TryGetValue(guser.GuildId, out Dictionary<string, List<ulong>> serverMembers))
+                            if (Controller.Instance.servers.TryGetValue(guser.GuildId, out Dictionary<string, List<ulong>> serverMembers))
                                 // If the user wasn't removed from the list then they were already muted, so add to unmute list
                                 if (!serverMembers["mute"].Remove(guser.Id))
                                     serverMembers["unmute"].Add(guser.Id);
@@ -396,7 +396,7 @@ namespace discordBot
         [Command("reroll_lottery")]
         public async Task ReRollLotto()
         {
-            await Program.Instance.RoleLottery();
+            await Controller.Instance.RoleLottery();
             await ReplyAsync("Rerolled lottery.");
         }
 

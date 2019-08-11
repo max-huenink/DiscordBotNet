@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace discordBot
 {
-    class Program
+    partial class Controller
     {
         private readonly DiscordSocketClient client;
         private readonly CommandService commands;
@@ -43,11 +43,11 @@ namespace discordBot
         public Dictionary<ulong, Dictionary<string, List<ulong>>> servers = new Dictionary<ulong, Dictionary<string, List<ulong>>>();
         private ulong spiritBearGuildID = 259533308512174081;
 
-        public static Program Instance;
+        public static Controller Instance;
 
-        static void Main(string[] args) => new Program().Start().GetAwaiter().GetResult();
+        static void Main(string[] args) => new Controller().Start().GetAwaiter().GetResult();
 
-        public Program()
+        public Controller()
         {
             if (Instance == null)
                 Instance = this;
@@ -124,6 +124,7 @@ namespace discordBot
               };
 
             await InstallCommands();
+            Init_Events();
 
             // Tries to login, if it fails the token is probably incorrect (or discord is down)
             try
@@ -154,17 +155,6 @@ namespace discordBot
             // Hook the MessageReceived Event into our Command Handler
             client.MessageReceived += HandleCommand;
 
-            client.UserVoiceStateUpdated += VoiceStateChange;
-            client.UserJoined += UserJoinGuild;
-            client.UserLeft += UserLeftGuild;
-            //client.MessageUpdated += HandleUpdate;
-
-            client.Connected += async () =>
-            {
-                syncUptime.Start();
-                await Task.Delay(1);
-            };
-
             //client.MessageDeleted += HandleDelete;
 
             // Discover all of the commands in this assembly and load them.
@@ -183,71 +173,6 @@ namespace discordBot
             //spiritBearLogChannel = client.GetChannel(543571980985565194) as IMessageChannel;
             botLogChannel = client.GetChannel(543875988094844958) as IMessageChannel;
             await Task.Delay(1);
-        }
-
-        public async Task UserJoinGuild(SocketGuildUser user)
-        {
-            await botLogChannel.SendMessageAsync($"`{user.Username}` joined `{user.Guild}`");
-            /*
-            if (user.Guild.Id == spiritBearGuildID)
-                await spiritBearLogChannel.SendMessageAsync($"`{user.Username}` joined the server");
-            */
-        }
-
-        public async Task UserLeftGuild(SocketGuildUser user)
-        {
-            await botLogChannel.SendMessageAsync($"`{user.Username}` left `{user.Guild}`");
-            /*
-            if (user.Guild.Id == spiritBearGuildID)
-                await spiritBearLogChannel.SendMessageAsync($"`{user.Username}` left the server");
-            */
-        }
-
-        public async Task VoiceStateChange(SocketUser user, SocketVoiceState state1, SocketVoiceState state2)
-        {
-            IGuildUser guser = user as IGuildUser;
-            if (servers.TryGetValue(guser.GuildId, out Dictionary<string, List<ulong>> serverUser))
-            {
-                if (serverUser["mute"].Contains(user.Id))
-                {
-                    await guser.ModifyAsync(properties => properties.Mute = true);
-                    serverUser["mute"].Remove(user.Id);
-                }
-                if (serverUser["unmute"].Contains(user.Id))
-                {
-                    await guser.ModifyAsync(properties => properties.Mute = false);
-                    serverUser["unmute"].Remove(user.Id);
-                }
-            }
-
-            string preText = $"`{user.Username}` ";
-            string message = "";
-
-            // If state 1 is null/empty
-            if (state1.VoiceChannel == null)
-                message = $"joined `{state2.VoiceChannel.Name}`";
-
-            // If state 2 is null/empty
-            else if (state2.VoiceChannel == null)
-                message = $"left `{state1.VoiceChannel.Name}`";
-
-            // If state 1 and state 2 are different
-            else if (state1.ToString() != state2.ToString())
-            {
-                message = $"switched from " +
-                $"`{state1.VoiceChannel.Name}` to `{state2.VoiceChannel.Name}`";
-            }
-            if (!string.IsNullOrEmpty(message))
-            {
-                /*
-                if (guser.GuildId == spiritBearGuildID)
-                {
-                    await spiritBearLogChannel.SendMessageAsync($"{preText} {message}.");
-                }
-                */
-                message += $" in `{guser.Guild.Name}`";
-                await botLogChannel.SendMessageAsync($"{preText} {message}.");
-            }
         }
 
         public async Task HandleCommand(SocketMessage messageParam)
@@ -270,17 +195,6 @@ namespace discordBot
             await UpdateUptime();
         }
         
-        public async Task HandleUpdate(Cacheable<IMessage, ulong> cacheMsg, SocketMessage message, ISocketMessageChannel channel)
-        {
-            await HandleCommand(message);
-        }
-
-        public async Task HandleDelete(Cacheable<IMessage, ulong> message, ISocketMessageChannel channel)
-        {
-            IMessage msg = await message.GetOrDownloadAsync();
-            await botLogChannel.SendMessageAsync($"The deleted message was from {msg.Author} and was: ```{msg.Content}```");
-        }
-
         public async Task UpdateUptime()
         {
             await client.SetGameAsync($"m!help for {swElapsed}", type: ActivityType.Playing);
