@@ -1,6 +1,7 @@
 ﻿using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
+using discordBot.Services;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -249,7 +250,7 @@ namespace discordBot
         public async Task Help()
         {
             await ReplyAsync($"Here is a list of available commands:\n" +
-                $"m!remind `integer``{{w,d,h,m,s}}` `message`\n" +
+                $"m!remind `integer` `{{w,d,h,m,s}}` `message`\n" +
                     $"\tReminds you about `message` after specified length of time.\n" +
                     $"\tFor example: `m!remind 11h Hello world` will send `Hello world` after 11 hours.\n" +
                 $"\nm!tp\n\tMoves the user to the specified user or voice channel, specify a voice channel by its ID\n" +
@@ -538,6 +539,27 @@ namespace discordBot
             await ReplyAsync("Exiting...");
             await Context.Client.StopAsync();
             Environment.Exit(0);
+        }
+
+        private AudioService Service => Controller.Instance.Audio;
+
+        [Command("relay", RunMode = RunMode.Async)]
+        public async Task VoiceRelay()
+        {
+            var vc = (Context.User as IVoiceState).VoiceChannel;
+            if (vc == null)
+            {
+                await ReplyAsync($"{Context.User.Username} is not in a voice channel.");
+                return;
+            }
+            Console.WriteLine("About to try to join");
+            await Service.JoinAudio(Context.Guild, vc);
+        }
+
+        [Command("leave", RunMode = RunMode.Async)]
+        public async Task LeaveVoice()
+        {
+            await Service.LeaveAudio(Context.Guild);
         }
 
         [Command("help")]
