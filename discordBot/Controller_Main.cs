@@ -1,6 +1,7 @@
 ﻿using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
+using discordBot.Services;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
@@ -21,6 +22,7 @@ namespace discordBot
         private readonly string tokenPath;
         private readonly string token;
         public readonly Stopwatch sw = new Stopwatch();
+        public readonly AudioService Audio;
 
         // A string that specifies how long the bot has been running based on when it connected
         public string swElapsed
@@ -53,6 +55,7 @@ namespace discordBot
                 Instance = this;
             // Sets things needed for Program()
             rand = new Random();
+            Audio = new AudioService();
             client = new DiscordSocketClient(new DiscordSocketConfig
             {
                 LogLevel = LogSeverity.Verbose,

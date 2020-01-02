@@ -28,16 +28,17 @@ namespace discordBot
         {
             client.UserVoiceStateUpdated += VoiceStateChangeForLogging;
             client.UserVoiceStateUpdated += VoiceStateChangeForText;
+            client.UserVoiceStateUpdated += VoiceRelay;
             client.UserJoined += UserJoinGuild;
             client.UserLeft += UserLeftGuild;
             //client.MessageUpdated += HandleUpdate;
+            client.ChannelUpdated += ChannelUpdateForText;
 
             client.Connected += async () =>
             {
                 syncUptime.Start();
                 await Task.Delay(1);
             };
-            client.ChannelUpdated += ChannelUpdateForText;
         }
 
         public async Task UserJoinGuild(SocketGuildUser user)
@@ -107,8 +108,6 @@ namespace discordBot
 
         public async Task VoiceStateChangeForText(SocketUser user, SocketVoiceState state1, SocketVoiceState state2)
         {
-            IGuildUser guser = user as IGuildUser;
-
             if (state1.ToString() != state2.ToString())
             {
                 ITextChannel leaveChannel = await GetAssocChannel((state1 as IVoiceState).VoiceChannel);
@@ -125,6 +124,13 @@ namespace discordBot
                                          channelAssoc);
                 }
             }
+        }
+
+        public async Task VoiceRelay(SocketUser user, SocketVoiceState state1, SocketVoiceState state2)
+        {
+            if (state1.ToString() != state2.ToString())
+                if (state1.VoiceChannel != null && state1.VoiceChannel.Users.Count <= 1)
+                    await Audio.LeaveAudio(state1.VoiceChannel.Guild);
         }
 
         public async Task ChannelUpdateForText(SocketChannel channel1, SocketChannel channel2)
