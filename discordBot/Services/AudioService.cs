@@ -4,6 +4,8 @@ using System.IO;
 using System.Threading.Tasks;
 using Discord;
 using Discord.Audio;
+using System.Linq;
+using System.Collections.Generic;
 
 namespace discordBot.Services
 {
@@ -13,15 +15,10 @@ namespace discordBot.Services
 
         public async Task JoinAudio(IGuild guild, IVoiceChannel target)
         {
-            IAudioClient client;
-            if (ConnectedChannels.TryGetValue(guild.Id, out client))
-            {
+            if (ConnectedChannels.TryGetValue(guild.Id, out _))
                 return;
-            }
             if (target.Guild.Id != guild.Id)
-            {
                 return;
-            }
 
             var audioClient = await target.ConnectAsync();
 
@@ -33,10 +30,19 @@ namespace discordBot.Services
             }
         }
 
+        private async Task UpdateSends()
+        {
+            foreach (var clientKVP in ConnectedChannels)
+            {
+                IAudioClient client = clientKVP.Value;
+                IEnumerable<IGuildUser> usersInClientChannel = (await (client as IVoiceChannel).GetUsersAsync().FlattenAsync()).Where(u => !u.IsBot);
+                ConnectedChannels.Where(c => !c.Value.Equals(client));
+            }
+        }
+
         public async Task LeaveAudio(IGuild guild)
         {
-            IAudioClient client;
-            if (ConnectedChannels.TryRemove(guild.Id, out client))
+            if (ConnectedChannels.TryRemove(guild.Id, out IAudioClient client))
             {
                 await client.StopAsync();
                 //await Log(LogSeverity.Info, $"Disconnected from voice on {guild.Name}.");
